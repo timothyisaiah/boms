@@ -66,6 +66,7 @@ const routes = [
           title: 'Finance workspace',
           allowedRoles: [
             'admin_owner',
+            'operations_manager',
             'finance_accountant',
             'read_only_management'
           ]

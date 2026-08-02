@@ -163,10 +163,15 @@ const allNavigationItems = [
   },
   {
     label: 'Finance',
-    caption: 'Remittances, margins, and review',
+    caption: 'Reconciliation, remittances, margins, and review',
     icon: 'payments',
     to: '/finance',
-    allowedRoles: ['admin_owner', 'finance_accountant', 'read_only_management']
+    allowedRoles: [
+      'admin_owner',
+      'operations_manager',
+      'finance_accountant',
+      'read_only_management'
+    ]
   },
   {
     label: 'Access & Settings',
