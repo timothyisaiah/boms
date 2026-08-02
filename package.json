@@ -1,0 +1,51 @@
+{
+  "name": "boms",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A Quasar Project",
+  "keywords": [
+    "quasar",
+    "quasar-app",
+    "quasar-app-vite",
+    "quasar-cli",
+    "vite",
+    "vue",
+    "vuejs"
+  ],
+  "author": "timothyisaiah <timothyisaiah7@gmail.com>",
+  "type": "module",
+  "scripts": {
+    "lint": "oxfmt && oxlint --fix",
+    "lint:check": "oxfmt --check && oxlint",
+    "dev": "quasar dev",
+    "build": "quasar build",
+    "postinstall": "quasar prepare --silent",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:db:reset": "supabase db reset --local",
+    "supabase:db:push": "supabase db push",
+    "supabase:seed-admin": "node supabase/provision-admin-user.mjs --mode development",
+    "supabase:seed-admin:production": "node supabase/provision-admin-user.mjs --mode production"
+  },
+  "dependencies": {
+    "@quasar/extras": "^2.0.0",
+    "@supabase/supabase-js": "^2.111.0",
+    "quasar": "^2.23.3",
+    "vue": "^3.5.22",
+    "vue-router": "^5.0.6"
+  },
+  "devDependencies": {
+    "@quasar/app-vite": "^3.3.0",
+    "autoprefixer": "^10.4.27",
+    "oxfmt": "^0.x",
+    "oxlint": "^1.x",
+    "postcss": "^8.5.8",
+    "sass-embedded": "^1.100.0",
+    "supabase": "^2.111.0"
+  },
+  "engines": {
+    "node": ">= 26 || ^24 || ^22.12"
+  },
+  "productName": "beecone"
+}
