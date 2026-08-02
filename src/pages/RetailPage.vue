@@ -7,8 +7,8 @@
         <p class="page-hero__body">
           Finished jars now stay traceable after production. Warehouse staff and
           distribution teams can see batch-level stock, issue it to retailers,
-          and review the movement history that Phase 4 reconciliation will build
-          on.
+          and review the movement history that Phase 4 reconciliation now
+          settles into sales, returns, damage, and retailer balances.
         </p>
       </div>
 
@@ -25,7 +25,7 @@
           flat
           color="secondary"
           no-caps
-          label="Open finance view"
+          label="Open reconciliation and finance"
           to="/finance"
         />
       </div>
@@ -724,6 +724,9 @@ function formatMovementType(value) {
 
     case 'reconciliation_sale':
       return 'Reconciliation sale'
+
+    case 'damage':
+      return 'Damage'
 
     default:
       return value

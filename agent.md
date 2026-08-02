@@ -250,9 +250,9 @@ phase item materially changes from planned to delivered.
 
 ### Phase 4: Reconciliation and Finance
 
-- [ ] Capture sold, returned, damaged, remaining, and remitted values
-- [ ] Track retailer outstanding balances
-- [ ] Add expenses and gross profit views
+- [x] Capture sold, returned, damaged, remaining, and remitted values
+- [x] Track retailer outstanding balances
+- [x] Add expenses and gross profit views
 
 ### Phase 5: Reporting and Hardening
 
@@ -276,8 +276,14 @@ As of August 2, 2026, the current implementation includes:
 - finished stock visibility tied to production batch outputs
 - stock issue entry that decrements warehouse stock and writes retailer ledger
   movements
-- phase 2 and phase 3 workspaces in the app for supply, production, warehouse,
-  and distribution workflows
+- retailer reconciliation entry that records sold, returned, damaged, and
+  remaining outcomes against issued stock lines
+- remittance entry that tracks retailer cash collections separately from stock
+  recognition
+- expense entry and finance summary views for outstanding balances, gross
+  profit, and net result review
+- phase 2, phase 3, and phase 4 workspaces in the app for supply, production,
+  warehouse, distribution, and finance workflows
 
 ## Environment Rule: No Docker Workflow
 
@@ -319,6 +325,10 @@ The current database delivery has been built through forward-only migrations:
 - `20260802224500_fix_record_production_batch_inventory_status_cast.sql`
   - fixes `record_production_batch` so inventory lot status updates cast
     correctly to the `inventory_lot_status` enum on the hosted project
+- `20260802233000_reconciliation_and_finance_foundation.sql`
+  - creates reconciliations, reconciliation items, remittances, expenses,
+    finance summary views, and the phase 4 RPCs for reconciliation,
+    remittance, and expense entry
 
 Rule for future work:
 
@@ -368,6 +378,10 @@ After pushing migrations and seeding hosted data, verify the following:
 - production entry consumes open lots and produces batch output cost
 - stock issue entry creates issue records, decrements `production_outputs`
   `quantity_remaining`, and writes retailer ledger movement history
+- reconciliation entry creates reconciliation records, settlement ledger
+  movements, and returns good stock to `production_outputs.quantity_remaining`
+- remittance entry updates retailer outstanding balances
+- expense entry updates gross profit and net result views
 
 ## Immediate Deliverables
 

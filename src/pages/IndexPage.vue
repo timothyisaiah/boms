@@ -2,17 +2,18 @@
   <q-page class="page-layout">
     <section class="page-hero">
       <div>
-        <p class="page-hero__eyebrow">Foundation through phase 3</p>
+        <p class="page-hero__eyebrow">Foundation through phase 4</p>
         <h1 class="page-hero__title"
-          >BOMS now covers secure access, supply control, and warehouse
-          distribution.</h1
+          >BOMS now covers secure access, supply control, warehouse
+          distribution, and retailer finance reconciliation.</h1
         >
         <p class="page-hero__body">
           The Beecone app now combines Supabase-backed authentication with
           seeded catalogue masters, purchase receipt entry, material lot
-          tracking, production batch costing, finished stock visibility, and
-          retailer issue workflows so the MVP can move from shell screens into
-          transactional truth.
+          tracking, production batch costing, finished stock visibility,
+          retailer issue workflows, reconciliation posting, remittance tracking,
+          and expense-aware profit views so the MVP can move from shell screens
+          into transactional truth.
         </p>
       </div>
 
@@ -22,7 +23,7 @@
           flat
           color="secondary"
           no-caps
-          label="Review finance route"
+          label="Open finance workspace"
           to="/finance"
         />
       </div>
@@ -132,6 +133,11 @@ const metrics = [
     label: 'Distribution',
     title: 'Retail issues stay batch-traceable',
     text: 'Finished jars can now move to retailers without collapsing warehouse stock or retailer movement history into a single balance.'
+  },
+  {
+    label: 'Finance',
+    title: 'Reconciliation closes the loop',
+    text: 'Retailer stock counts, remittances, expenses, and gross profit now share one append-only financial view.'
   }
 ]
 
@@ -163,10 +169,15 @@ const allWorkspaces = [
   },
   {
     title: 'Finance workspace',
-    text: 'Remittances, margins, and management review.',
+    text: 'Reconciliation, remittances, expenses, and management review.',
     to: '/finance',
     icon: 'payments',
-    allowedRoles: ['admin_owner', 'finance_accountant', 'read_only_management']
+    allowedRoles: [
+      'admin_owner',
+      'operations_manager',
+      'finance_accountant',
+      'read_only_management'
+    ]
   },
   {
     title: 'Access and settings',
