@@ -24,7 +24,10 @@
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
     "supabase:db:reset": "supabase db reset --local",
+    "supabase:seed:local": "yarn supabase:db:reset",
     "supabase:db:push": "supabase db push",
+    "supabase:seed": "node supabase/seed-reference-data.mjs --mode development",
+    "supabase:seed:production": "node supabase/seed-reference-data.mjs --mode production",
     "supabase:seed-admin": "node supabase/provision-admin-user.mjs --mode development",
     "supabase:seed-admin:production": "node supabase/provision-admin-user.mjs --mode production"
   },
