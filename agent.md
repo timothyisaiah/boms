@@ -244,9 +244,9 @@ phase item materially changes from planned to delivered.
 
 ### Phase 3: Warehouse and Distribution
 
-- [ ] Track finished stock by batch
-- [ ] Implement stock issue to retailers
-- [ ] Add retailer stock views and movement history
+- [x] Track finished stock by batch
+- [x] Implement stock issue to retailers
+- [x] Add retailer stock views and movement history
 
 ### Phase 4: Reconciliation and Finance
 
@@ -266,13 +266,18 @@ As of August 2, 2026, the current implementation includes:
 
 - Supabase-backed authentication and role-aware route protection
 - `public.user_profiles` sync from `auth.users`
-- core catalogue, material, supplier, purchasing, inventory lot, and production
-  schema
+- core catalogue, material, supplier, purchasing, inventory lot, production,
+  retailer, and warehouse distribution schema
 - RLS policies for the new operational tables
-- remote seed flow for Beecone products, variants, materials, and suppliers
+- remote seed flow for Beecone products, variants, materials, suppliers, and
+  retailers
 - purchase receipt entry that creates inventory lots
 - production batch entry that consumes real lots and calculates output unit cost
-- a phase 2 operations workspace in the app for supply and production workflows
+- finished stock visibility tied to production batch outputs
+- stock issue entry that decrements warehouse stock and writes retailer ledger
+  movements
+- phase 2 and phase 3 workspaces in the app for supply, production, warehouse,
+  and distribution workflows
 
 ## Environment Rule: No Docker Workflow
 
@@ -308,6 +313,12 @@ The current database delivery has been built through forward-only migrations:
 - `20260802203000_rls_helper_access_and_csp_followup.sql`
   - grants access needed for RLS helper evaluation by authenticated users and
     follows up on remote policy access behavior
+- `20260802213000_warehouse_distribution_foundation.sql`
+  - creates retailers, stock issues, retailer stock ledgers, phase 3 RLS
+    policies, and the stock issue RPC that updates finished stock by batch
+- `20260802224500_fix_record_production_batch_inventory_status_cast.sql`
+  - fixes `record_production_batch` so inventory lot status updates cast
+    correctly to the `inventory_lot_status` enum on the hosted project
 
 Rule for future work:
 
@@ -335,7 +346,8 @@ The current seed and setup files serve different purposes:
 - `supabase/seed.sql`
   - local SQL seed kept for reset-based workflows, if they are ever needed
 - `supabase/seed-reference-data.mjs`
-  - hosted reference-data seed for products, variants, materials, and suppliers
+  - hosted reference-data seed for products, variants, materials, suppliers,
+    and retailers
 - `supabase/provision-admin-user.mjs`
   - creates or updates the password-capable administrator user through the
     Supabase Auth Admin API
@@ -347,11 +359,15 @@ The current seed and setup files serve different purposes:
 After pushing migrations and seeding hosted data, verify the following:
 
 - the authenticated user can read `products`, `product_variants`, `materials`,
-  `suppliers`, `purchases`, `inventory_lots`, and `production_batches`
+  `suppliers`, `retailers`, `purchases`, `inventory_lots`,
+  `production_batches`, and `production_outputs`
 - the user has an active role in `public.user_profiles`
 - the operations workspace loads without `403` responses from Supabase REST
+- the distribution workspace loads without `403` responses from Supabase REST
 - purchase entry creates inventory lots
 - production entry consumes open lots and produces batch output cost
+- stock issue entry creates issue records, decrements `production_outputs`
+  `quantity_remaining`, and writes retailer ledger movement history
 
 ## Immediate Deliverables
 

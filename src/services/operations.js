@@ -152,12 +152,24 @@ export function getPreviewOperationsWorkspace() {
 }
 
 export function formatOperationsError(error, fallbackMessage) {
+  const messageParts = []
+
   if (error instanceof Error && error.message) {
-    return error.message
+    messageParts.push(error.message)
+  } else if (typeof error?.message === 'string' && error.message) {
+    messageParts.push(error.message)
   }
 
-  if (typeof error?.message === 'string' && error.message) {
-    return error.message
+  if (typeof error?.details === 'string' && error.details) {
+    messageParts.push(error.details)
+  }
+
+  if (typeof error?.hint === 'string' && error.hint) {
+    messageParts.push(`Hint: ${error.hint}`)
+  }
+
+  if (messageParts.length > 0) {
+    return messageParts.join(' ')
   }
 
   return fallbackMessage
@@ -336,7 +348,7 @@ export async function fetchOperationsWorkspace() {
         `
       )
       .order('started_at', { ascending: false })
-      .limit(6)
+      .limit(25)
   ])
 
   throwIfError(variantsResult.error)

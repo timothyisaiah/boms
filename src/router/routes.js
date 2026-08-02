@@ -48,10 +48,11 @@ const routes = [
         name: 'retail',
         component: () => import('@/pages/RetailPage.vue'),
         meta: {
-          title: 'Retail workspace',
+          title: 'Warehouse and distribution workspace',
           allowedRoles: [
             'admin_owner',
             'operations_manager',
+            'warehouse_staff',
             'sales_or_distribution_staff',
             'finance_accountant'
           ]

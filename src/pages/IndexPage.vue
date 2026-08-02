@@ -2,25 +2,22 @@
   <q-page class="page-layout">
     <section class="page-hero">
       <div>
-        <p class="page-hero__eyebrow">Foundation plus phase 2</p>
+        <p class="page-hero__eyebrow">Foundation through phase 3</p>
         <h1 class="page-hero__title"
-          >BOMS now covers secure access and the first real supply workflow.</h1
+          >BOMS now covers secure access, supply control, and warehouse
+          distribution.</h1
         >
         <p class="page-hero__body">
           The Beecone app now combines Supabase-backed authentication with
           seeded catalogue masters, purchase receipt entry, material lot
-          tracking, and production batch costing so the MVP can move from shell
-          screens into transactional truth.
+          tracking, production batch costing, finished stock visibility, and
+          retailer issue workflows so the MVP can move from shell screens into
+          transactional truth.
         </p>
       </div>
 
       <div class="page-hero__actions">
-        <q-btn
-          color="primary"
-          no-caps
-          label="Open operations"
-          to="/operations"
-        />
+        <q-btn color="primary" no-caps label="Open distribution" to="/retail" />
         <q-btn
           flat
           color="secondary"
@@ -130,6 +127,11 @@ const metrics = [
     label: 'Production',
     title: 'Batch costing is centralized',
     text: 'Production batches now consume real lots and calculate repeatable cost per jar in the database layer.'
+  },
+  {
+    label: 'Distribution',
+    title: 'Retail issues stay batch-traceable',
+    text: 'Finished jars can now move to retailers without collapsing warehouse stock or retailer movement history into a single balance.'
   }
 ]
 
@@ -147,13 +149,14 @@ const allWorkspaces = [
     ]
   },
   {
-    title: 'Retail workspace',
-    text: 'Distribution, reconciliation, and retailer movement.',
+    title: 'Distribution workspace',
+    text: 'Finished stock, retailer issues, and movement history.',
     to: '/retail',
     icon: 'storefront',
     allowedRoles: [
       'admin_owner',
       'operations_manager',
+      'warehouse_staff',
       'sales_or_distribution_staff',
       'finance_accountant'
     ]

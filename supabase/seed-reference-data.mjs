@@ -168,6 +168,37 @@ const supplierSeeds = [
   }
 ]
 
+const retailerSeeds = [
+  {
+    retailer_name: 'Ntinda Health Market',
+    contact_name: 'Irene Namubiru',
+    phone: '+256700200101',
+    email: 'orders@ntindahealth.test',
+    delivery_location: 'Ntinda, Kampala',
+    notes: 'Sample consignment partner for central Kampala replenishment.',
+    is_active: true
+  },
+  {
+    retailer_name: 'Entebbe Organics Corner',
+    contact_name: 'Paul Ssemanda',
+    phone: '+256700200202',
+    email: 'stock@entebbeorganics.test',
+    delivery_location: 'Entebbe Road, Wakiso',
+    notes: 'Sample airport corridor retailer for jar movement demos.',
+    is_active: true
+  },
+  {
+    retailer_name: 'Jinja Farmers Shop',
+    contact_name: 'Naomi Auma',
+    phone: '+256700200303',
+    email: 'retail@jinjafarmers.test',
+    delivery_location: 'Jinja Main Street',
+    notes:
+      'Sample upcountry retailer for distribution and reconciliation flows.',
+    is_active: true
+  }
+]
+
 if (!supabaseUrl || !supabaseSecretKey) {
   console.error(
     `Missing SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_SECRET_KEY. The script reads .env files automatically for mode "${selectedMode}".`
@@ -305,15 +336,66 @@ async function upsertSuppliers() {
   }
 }
 
+async function upsertRetailers() {
+  const { data: existingRetailers, error: selectError } = await supabase
+    .from('retailers')
+    .select('id, retailer_name')
+
+  if (selectError) {
+    throw selectError
+  }
+
+  const retailerIdByName = new Map(
+    (existingRetailers ?? []).map(retailer => [
+      normalizeName(retailer.retailer_name),
+      retailer.id
+    ])
+  )
+
+  const retailersToUpdate = retailerSeeds
+    .filter(retailer =>
+      retailerIdByName.has(normalizeName(retailer.retailer_name))
+    )
+    .map(retailer => ({
+      id: retailerIdByName.get(normalizeName(retailer.retailer_name)),
+      ...retailer
+    }))
+
+  const retailersToInsert = retailerSeeds.filter(
+    retailer => !retailerIdByName.has(normalizeName(retailer.retailer_name))
+  )
+
+  if (retailersToUpdate.length > 0) {
+    const { error: updateError } = await supabase
+      .from('retailers')
+      .upsert(retailersToUpdate, { onConflict: 'id' })
+
+    if (updateError) {
+      throw updateError
+    }
+  }
+
+  if (retailersToInsert.length > 0) {
+    const { error: insertError } = await supabase
+      .from('retailers')
+      .insert(retailersToInsert)
+
+    if (insertError) {
+      throw insertError
+    }
+  }
+}
+
 async function seedReferenceData() {
   const productIdBySlug = await upsertProducts()
 
   await upsertVariants(productIdBySlug)
   await upsertMaterials()
   await upsertSuppliers()
+  await upsertRetailers()
 
   console.log(
-    `Seeded ${productSeeds.length} products, ${variantSeeds.length} variants, ${materialSeeds.length} materials, and ${supplierSeeds.length} suppliers into ${supabaseUrl}.`
+    `Seeded ${productSeeds.length} products, ${variantSeeds.length} variants, ${materialSeeds.length} materials, ${supplierSeeds.length} suppliers, and ${retailerSeeds.length} retailers into ${supabaseUrl}.`
   )
 }
 

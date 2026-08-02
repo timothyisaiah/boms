@@ -36,8 +36,9 @@
       class="surface-card operations-banner bg-amber-1 text-brown-10"
     >
       This workspace is showing the seeded phase 2 blueprint because Supabase is
-      not configured in the app yet. Run `yarn supabase:db:reset` after adding
-      env keys to unlock live purchasing and production writes.
+      not configured in the app yet. Add the env keys, then use `yarn
+      supabase:db:push` and `yarn supabase:seed` to unlock live purchasing and
+      production writes.
     </q-banner>
 
     <q-banner
@@ -46,6 +47,15 @@
       class="surface-card operations-banner bg-orange-1 text-brown-10"
     >
       {{ loadError }}
+    </q-banner>
+
+    <q-banner
+      v-if="actionFeedback.message"
+      rounded
+      :class="actionFeedbackClass"
+      class="surface-card operations-banner"
+    >
+      {{ actionFeedback.message }}
     </q-banner>
 
     <section class="card-grid card-grid--three">
@@ -68,9 +78,9 @@
       <q-card flat class="surface-card">
         <q-card-section>
           <div class="section-label">Reference deck</div>
-          <div class="section-title"
-            >Seeded variants, materials, and suppliers</div
-          >
+          <div class="section-title">
+            Seeded variants, materials, and suppliers
+          </div>
         </q-card-section>
 
         <q-card-section class="operations-reference-grid">
@@ -84,7 +94,7 @@
                 color="amber-2"
                 text-color="brown-10"
               >
-                {{ variant.sku }} • {{ variant.variant_name }}
+                {{ variant.sku }} / {{ variant.variant_name }}
               </q-chip>
             </div>
           </div>
@@ -99,7 +109,7 @@
                 color="green-1"
                 text-color="green-10"
               >
-                {{ material.name }} • {{ formatMaterialKind(material.kind) }}
+                {{ material.name }} / {{ formatMaterialKind(material.kind) }}
               </q-chip>
             </div>
           </div>
@@ -147,7 +157,7 @@
             </div>
 
             <div class="text-caption text-grey-7 q-mt-xs">
-              {{ lot.supplier?.supplier_name ?? 'Unknown supplier' }} • received
+              {{ lot.supplier?.supplier_name ?? 'Unknown supplier' }} / received
               {{ formatDate(lot.received_at) }}
             </div>
           </article>
@@ -320,9 +330,9 @@
       <q-card flat class="surface-card">
         <q-card-section>
           <div class="section-label">Production workflow</div>
-          <div class="section-title"
-            >Consume lots and create finished output</div
-          >
+          <div class="section-title">
+            Consume lots and create finished output
+          </div>
         </q-card-section>
 
         <q-card-section>
@@ -361,6 +371,7 @@
                 outlined
                 :disable="batchWritesDisabled"
                 label="Batch code"
+                hint="Auto-suggested and incremented by date"
               />
 
               <q-input
@@ -438,7 +449,7 @@
                     resolveInventoryLot(input.inventoryLotId).material?.name ??
                     'Material'
                   }}
-                  •
+                  /
                   {{
                     formatQuantity(
                       resolveInventoryLot(input.inventoryLotId)
@@ -521,7 +532,7 @@
             </div>
 
             <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ purchase.supplier?.supplier_name ?? 'Unknown supplier' }} •
+              {{ purchase.supplier?.supplier_name ?? 'Unknown supplier' }} /
               {{ formatDate(purchase.purchased_at) }}
             </div>
 
@@ -533,7 +544,7 @@
                 color="grey-2"
                 text-color="grey-9"
               >
-                {{ item.material?.name ?? 'Material' }} •
+                {{ item.material?.name ?? 'Material' }} /
                 {{ formatQuantity(item.quantity) }}
                 {{ item.material?.unit_of_measure ?? 'units' }}
               </q-chip>
@@ -569,8 +580,8 @@
             </div>
 
             <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ batch.variant?.variant_name ?? 'Unknown variant' }} •
-              {{ batch.total_output_quantity }} jars •
+              {{ batch.variant?.variant_name ?? 'Unknown variant' }} /
+              {{ batch.total_output_quantity }} jars /
               {{ formatDate(batch.started_at) }}
             </div>
 
@@ -582,7 +593,7 @@
                 color="grey-2"
                 text-color="grey-9"
               >
-                {{ input.material?.name ?? 'Material' }} •
+                {{ input.material?.name ?? 'Material' }} /
                 {{ formatQuantity(input.quantity_consumed) }}
                 {{ input.material?.unit_of_measure ?? 'units' }}
               </q-chip>
@@ -603,7 +614,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import {
   fetchOperationsWorkspace,
@@ -624,8 +635,16 @@ function getTodayString() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function formatBatchDateStamp(dateValue = getTodayString()) {
+  return dateValue.replaceAll('-', '')
+}
+
 function createBatchCode(dateValue = getTodayString()) {
-  return `PB-${dateValue.replaceAll('-', '')}-001`
+  return `PB-${formatBatchDateStamp(dateValue)}-001`
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function createPurchaseLine() {
@@ -663,12 +682,31 @@ function toIsoTimestamp(dateValue) {
   return `${dateValue}T12:00:00.000Z`
 }
 
+function getBatchDateString(value) {
+  if (!value) {
+    return ''
+  }
+
+  const parsedDate = new Date(value)
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return ''
+  }
+
+  return parsedDate.toISOString().slice(0, 10)
+}
+
 const $q = useQuasar()
 const workspace = ref(getPreviewOperationsWorkspace())
 const isLoading = ref(false)
 const isSubmittingPurchase = ref(false)
 const isSubmittingBatch = ref(false)
 const loadError = ref('')
+const actionFeedback = ref({
+  type: '',
+  message: ''
+})
+const lastSuggestedBatchCode = ref(createBatchCode())
 
 const purchaseForm = reactive({
   supplierId: null,
@@ -703,17 +741,8 @@ const materialOptions = computed(() =>
 
 const variantOptions = computed(() =>
   workspace.value.variants.map(variant => ({
-    label: `${variant.sku} • ${variant.variant_name}`,
+    label: `${variant.sku} / ${variant.variant_name}`,
     value: variant.id
-  }))
-)
-
-const inventoryLotOptions = computed(() =>
-  openInventoryLots.value.map(lot => ({
-    label: `${lot.lot_code} • ${lot.material?.name ?? 'Material'} • ${formatQuantity(
-      lot.quantity_remaining
-    )} ${lot.material?.unit_of_measure ?? 'units'} left`,
-    value: lot.id
   }))
 )
 
@@ -722,6 +751,28 @@ const openInventoryLots = computed(() =>
     lot => asNumber(lot.quantity_remaining) > 0
   )
 )
+
+const inventoryLotOptions = computed(() =>
+  openInventoryLots.value.map(lot => ({
+    label: `${lot.lot_code} / ${lot.material?.name ?? 'Material'} / ${formatQuantity(
+      lot.quantity_remaining
+    )} ${lot.material?.unit_of_measure ?? 'units'} left`,
+    value: lot.id
+  }))
+)
+
+const actionFeedbackClass = computed(() => {
+  switch (actionFeedback.value.type) {
+    case 'negative':
+      return 'bg-negative text-white'
+
+    case 'positive':
+      return 'bg-positive text-white'
+
+    default:
+      return 'bg-amber-1 text-brown-10'
+  }
+})
 
 const metrics = computed(() => [
   {
@@ -827,6 +878,56 @@ function resolveInventoryLot(lotId) {
   return openInventoryLots.value.find(lot => lot.id === lotId) ?? null
 }
 
+function suggestNextBatchCode(dateValue = batchForm.startedOn) {
+  const normalizedDateValue = dateValue || getTodayString()
+  const batchDateStamp = formatBatchDateStamp(normalizedDateValue)
+  const batchCodePattern = new RegExp(
+    `^PB-${escapeRegExp(batchDateStamp)}-(\\d{3,})$`
+  )
+
+  const nextSequenceNumber =
+    (workspace.value.batches ?? []).reduce((highestSequenceNumber, batch) => {
+      const batchCode = batch?.batch_code?.trim()
+
+      if (
+        !batchCode ||
+        getBatchDateString(batch.started_at) !== normalizedDateValue
+      ) {
+        return highestSequenceNumber
+      }
+
+      const codeMatch = batchCode.match(batchCodePattern)
+
+      if (!codeMatch) {
+        return highestSequenceNumber
+      }
+
+      const parsedSequenceNumber = Number(codeMatch[1])
+
+      if (!Number.isFinite(parsedSequenceNumber)) {
+        return highestSequenceNumber
+      }
+
+      return Math.max(highestSequenceNumber, parsedSequenceNumber)
+    }, 0) + 1
+
+  return `PB-${batchDateStamp}-${String(nextSequenceNumber).padStart(3, '0')}`
+}
+
+function syncSuggestedBatchCode({ force = false } = {}) {
+  const nextSuggestedBatchCode = suggestNextBatchCode(batchForm.startedOn)
+
+  if (
+    force ||
+    !batchForm.batchCode?.trim() ||
+    batchForm.batchCode === lastSuggestedBatchCode.value
+  ) {
+    batchForm.batchCode = nextSuggestedBatchCode
+  }
+
+  lastSuggestedBatchCode.value = nextSuggestedBatchCode
+}
+
 function addPurchaseLine() {
   purchaseForm.items.push(createPurchaseLine())
 }
@@ -868,6 +969,48 @@ function resetBatchForm() {
   batchForm.outputQuantity = ''
   batchForm.notes = ''
   resetArray(batchForm.inputs, [createBatchInput()])
+  syncSuggestedBatchCode({ force: true })
+}
+
+function clearActionFeedback() {
+  actionFeedback.value = {
+    type: '',
+    message: ''
+  }
+}
+
+function showMessage(type, message) {
+  actionFeedback.value = {
+    type,
+    message
+  }
+
+  if (typeof $q.notify === 'function') {
+    $q.notify({
+      type,
+      message
+    })
+  }
+}
+
+function findDuplicateLotCode(items) {
+  const seenLotCodes = new Set()
+
+  for (const item of items) {
+    if (typeof item.lot_code !== 'string' || item.lot_code.length === 0) {
+      continue
+    }
+
+    const normalizedLotCode = item.lot_code.toLowerCase()
+
+    if (seenLotCodes.has(normalizedLotCode)) {
+      return item.lot_code
+    }
+
+    seenLotCodes.add(normalizedLotCode)
+  }
+
+  return null
 }
 
 async function loadWorkspace() {
@@ -884,6 +1027,7 @@ async function loadWorkspace() {
     )
   } finally {
     isLoading.value = false
+    syncSuggestedBatchCode()
   }
 }
 
@@ -892,18 +1036,18 @@ async function submitPurchase() {
     return
   }
 
+  clearActionFeedback()
+
   const normalizedItems = purchaseForm.items.map(item => ({
     material_id: item.materialId,
     quantity: item.quantity === '' ? Number.NaN : asNumber(item.quantity, NaN),
     unit_cost: item.unitCost === '' ? Number.NaN : asNumber(item.unitCost, NaN),
     lot_code: item.lotCode?.trim() || null
   }))
+  const duplicateLotCode = findDuplicateLotCode(normalizedItems)
 
   if (!purchaseForm.supplierId) {
-    $q.notify({
-      type: 'warning',
-      message: 'Select a supplier before recording a purchase.'
-    })
+    showMessage('warning', 'Select a supplier before recording a purchase.')
     return
   }
 
@@ -917,11 +1061,18 @@ async function submitPurchase() {
         item.unit_cost < 0
     )
   ) {
-    $q.notify({
-      type: 'warning',
-      message:
-        'Complete every purchase line with a material, quantity, and unit cost.'
-    })
+    showMessage(
+      'warning',
+      'Complete every purchase line with a material, quantity, and unit cost.'
+    )
+    return
+  }
+
+  if (duplicateLotCode) {
+    showMessage(
+      'warning',
+      `Lot code "${duplicateLotCode}" is repeated in this receipt. Use unique lot codes or leave them blank to auto-generate.`
+    )
     return
   }
 
@@ -936,21 +1087,18 @@ async function submitPurchase() {
       items: normalizedItems
     })
 
-    $q.notify({
-      type: 'positive',
-      message: 'Purchase receipt recorded and inventory lots created.'
-    })
+    showMessage(
+      'positive',
+      'Purchase receipt recorded and inventory lots created.'
+    )
 
     resetPurchaseForm()
     await loadWorkspace()
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: formatOperationsError(
-        error,
-        'Unable to record the purchase receipt.'
-      )
-    })
+    showMessage(
+      'negative',
+      formatOperationsError(error, 'Unable to record the purchase receipt.')
+    )
   } finally {
     isSubmittingPurchase.value = false
   }
@@ -960,6 +1108,8 @@ async function submitProductionBatch() {
   if (batchWritesDisabled.value) {
     return
   }
+
+  clearActionFeedback()
 
   const normalizedInputs = batchForm.inputs.map(input => ({
     inventory_lot_id: input.inventoryLotId,
@@ -972,26 +1122,35 @@ async function submitProductionBatch() {
       : Math.trunc(asNumber(batchForm.outputQuantity, NaN))
 
   if (!batchForm.variantId) {
-    $q.notify({
-      type: 'warning',
-      message: 'Select a finished variant before creating a production batch.'
-    })
+    showMessage(
+      'warning',
+      'Select a finished variant before creating a production batch.'
+    )
     return
   }
 
   if (!batchForm.batchCode?.trim()) {
-    $q.notify({
-      type: 'warning',
-      message: 'Enter a batch code before saving the batch.'
-    })
+    showMessage('warning', 'Enter a batch code before saving the batch.')
+    return
+  }
+
+  if (
+    (workspace.value.batches ?? []).some(
+      batch =>
+        batch.batch_code?.trim()?.toLowerCase() ===
+        batchForm.batchCode.trim().toLowerCase()
+    )
+  ) {
+    syncSuggestedBatchCode()
+    showMessage(
+      'warning',
+      `Batch code "${batchForm.batchCode.trim()}" already exists. Try the next suggested code "${lastSuggestedBatchCode.value}".`
+    )
     return
   }
 
   if (!Number.isFinite(outputQuantity) || outputQuantity <= 0) {
-    $q.notify({
-      type: 'warning',
-      message: 'Enter a valid jar output quantity for the batch.'
-    })
+    showMessage('warning', 'Enter a valid jar output quantity for the batch.')
     return
   }
 
@@ -1003,12 +1162,40 @@ async function submitProductionBatch() {
         input.quantity <= 0
     )
   ) {
-    $q.notify({
-      type: 'warning',
-      message:
-        'Every production input needs an open lot and a consumed quantity.'
-    })
+    showMessage(
+      'warning',
+      'Every production input needs an open lot and a consumed quantity.'
+    )
     return
+  }
+
+  const requestedQuantityByLot = new Map()
+
+  for (const input of normalizedInputs) {
+    requestedQuantityByLot.set(
+      input.inventory_lot_id,
+      (requestedQuantityByLot.get(input.inventory_lot_id) ?? 0) + input.quantity
+    )
+  }
+
+  for (const [inventoryLotId, requestedQuantity] of requestedQuantityByLot) {
+    const selectedLot = resolveInventoryLot(inventoryLotId)
+
+    if (!selectedLot) {
+      showMessage(
+        'warning',
+        'One of the selected material lots is no longer open. Refresh the workspace and try again.'
+      )
+      return
+    }
+
+    if (requestedQuantity > asNumber(selectedLot.quantity_remaining)) {
+      showMessage(
+        'warning',
+        `Requested quantity exceeds what remains in lot ${selectedLot.lot_code}. Reduce the consumed quantity before saving the batch.`
+      )
+      return
+    }
   }
 
   isSubmittingBatch.value = true
@@ -1023,22 +1210,18 @@ async function submitProductionBatch() {
       inputs: normalizedInputs
     })
 
-    $q.notify({
-      type: 'positive',
-      message:
-        'Production batch recorded with traceable inputs and output cost.'
-    })
+    showMessage(
+      'positive',
+      'Production batch recorded with traceable inputs and output cost.'
+    )
 
     resetBatchForm()
     await loadWorkspace()
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: formatOperationsError(
-        error,
-        'Unable to create the production batch.'
-      )
-    })
+    showMessage(
+      'negative',
+      formatOperationsError(error, 'Unable to create the production batch.')
+    )
   } finally {
     isSubmittingBatch.value = false
   }
@@ -1047,4 +1230,11 @@ async function submitProductionBatch() {
 onMounted(() => {
   void loadWorkspace()
 })
+
+watch(
+  () => batchForm.startedOn,
+  () => {
+    syncSuggestedBatchCode()
+  }
+)
 </script>

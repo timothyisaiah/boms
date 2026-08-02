@@ -149,13 +149,14 @@ const allNavigationItems = [
     ]
   },
   {
-    label: 'Retail',
-    caption: 'Distribution and reconciliation',
+    label: 'Distribution',
+    caption: 'Warehouse stock, issues, and retailer movement',
     icon: 'storefront',
     to: '/retail',
     allowedRoles: [
       'admin_owner',
       'operations_manager',
+      'warehouse_staff',
       'sales_or_distribution_staff',
       'finance_accountant'
     ]

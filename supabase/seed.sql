@@ -271,6 +271,57 @@ set
   notes = excluded.notes,
   is_active = excluded.is_active;
 
+insert into public.retailers (
+  id,
+  retailer_name,
+  contact_name,
+  phone,
+  email,
+  delivery_location,
+  notes,
+  is_active
+)
+values
+  (
+    5001,
+    'Ntinda Health Market',
+    'Irene Namubiru',
+    '+256700200101',
+    'orders@ntindahealth.test',
+    'Ntinda, Kampala',
+    'Sample consignment partner for central Kampala replenishment.',
+    true
+  ),
+  (
+    5002,
+    'Entebbe Organics Corner',
+    'Paul Ssemanda',
+    '+256700200202',
+    'stock@entebbeorganics.test',
+    'Entebbe Road, Wakiso',
+    'Sample airport corridor retailer for jar movement demos.',
+    true
+  ),
+  (
+    5003,
+    'Jinja Farmers Shop',
+    'Naomi Auma',
+    '+256700200303',
+    'retail@jinjafarmers.test',
+    'Jinja Main Street',
+    'Sample upcountry retailer for distribution and reconciliation flows.',
+    true
+  )
+on conflict (id) do update
+set
+  retailer_name = excluded.retailer_name,
+  contact_name = excluded.contact_name,
+  phone = excluded.phone,
+  email = excluded.email,
+  delivery_location = excluded.delivery_location,
+  notes = excluded.notes,
+  is_active = excluded.is_active;
+
 select setval(
   pg_get_serial_sequence('public.products', 'id'),
   (select greatest(coalesce(max(id), 1), 1) from public.products),
@@ -292,5 +343,11 @@ select setval(
 select setval(
   pg_get_serial_sequence('public.suppliers', 'id'),
   (select greatest(coalesce(max(id), 1), 1) from public.suppliers),
+  true
+);
+
+select setval(
+  pg_get_serial_sequence('public.retailers', 'id'),
+  (select greatest(coalesce(max(id), 1), 1) from public.retailers),
   true
 );
