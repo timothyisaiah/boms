@@ -211,6 +211,148 @@ The first usable release should focus on the smallest system that gives Beecone 
 - Add alerts for low stock and expiring batches
 - Improve audit logs, validation, and usability
 
+## Implementation Progress Tracker
+
+Last updated: August 2, 2026
+
+Use this checklist as the implementation source of truth. Update it whenever a
+phase item materially changes from planned to delivered.
+
+### Phase 0: Discovery and Alignment
+
+- [ ] Confirm user roles and approval flows
+- [ ] Confirm whether all retailers are consignment-based or mixed
+- [ ] Confirm pricing rules by size, flavor, and retailer
+- [ ] Confirm how returns affect stock and accounting
+- [ ] Confirm batch naming, shelf life, and expiry rules
+- [ ] Confirm expense categories and reporting periods
+
+### Phase 1: Foundation
+
+- [x] Initialize Vue 3 + Quasar app scaffold
+- [x] Set up Supabase project structure
+- [x] Implement authentication and role model
+- [x] Create core database schema and RLS policies
+- [x] Seed product variants, materials, and sample suppliers
+
+### Phase 2: Supply and Production
+
+- [x] Build purchasing workflows
+- [x] Build raw material and packaging stock updates
+- [x] Build production batch creation
+- [x] Implement cost calculations and batch output records
+
+### Phase 3: Warehouse and Distribution
+
+- [ ] Track finished stock by batch
+- [ ] Implement stock issue to retailers
+- [ ] Add retailer stock views and movement history
+
+### Phase 4: Reconciliation and Finance
+
+- [ ] Capture sold, returned, damaged, remaining, and remitted values
+- [ ] Track retailer outstanding balances
+- [ ] Add expenses and gross profit views
+
+### Phase 5: Reporting and Hardening
+
+- [ ] Build dashboards and monthly review views
+- [ ] Add alerts for low stock and expiring batches
+- [ ] Improve audit logs, validation, and usability
+
+## Current Delivery Snapshot
+
+As of August 2, 2026, the current implementation includes:
+
+- Supabase-backed authentication and role-aware route protection
+- `public.user_profiles` sync from `auth.users`
+- core catalogue, material, supplier, purchasing, inventory lot, and production
+  schema
+- RLS policies for the new operational tables
+- remote seed flow for Beecone products, variants, materials, and suppliers
+- purchase receipt entry that creates inventory lots
+- production batch entry that consumes real lots and calculates output unit cost
+- a phase 2 operations workspace in the app for supply and production workflows
+
+## Environment Rule: No Docker Workflow
+
+BOMS is currently using a hosted Supabase workflow and is not using Docker for
+day-to-day development or deployment.
+
+Unless the team explicitly changes direction:
+
+- do not assume Docker Desktop is installed or available
+- do not instruct future agents to use `supabase start` as the default path
+- do not use `supabase db reset` as the normal migration or seed workflow
+- prefer remote migration push and hosted seeding against the linked Supabase
+  project
+
+If Docker is ever introduced later, document that change here before using it
+as the standard development path.
+
+## Supabase Process So Far
+
+### Migration History
+
+The current database delivery has been built through forward-only migrations:
+
+- `20260802164000_auth_roles_and_user_profiles.sql`
+  - creates app roles, user profiles, sync triggers, and auth RLS foundation
+- `20260802183000_supply_and_production_foundation.sql`
+  - creates products, variants, materials, suppliers, purchases, purchase
+    items, inventory lots, production batches, production inputs, production
+    outputs, and operational RLS policies
+- `20260802200000_supply_production_remote_alignment.sql`
+  - aligns remote supplier uniqueness and service-role grants for hosted seed
+    flows
+- `20260802203000_rls_helper_access_and_csp_followup.sql`
+  - grants access needed for RLS helper evaluation by authenticated users and
+    follows up on remote policy access behavior
+
+Rule for future work:
+
+- never rewrite or repurpose an already applied migration on the hosted project
+- always add a new forward migration for fixes, privileges, schema changes, or
+  policy corrections
+
+### Hosted Supabase Workflow
+
+This is the standard workflow for this project:
+
+1. Update or add a new migration under `supabase/migrations/`.
+2. Push migrations to the linked hosted project with `yarn supabase:db:push`.
+3. Seed reference data with `yarn supabase:seed` or
+   `yarn supabase:seed:production`.
+4. Provision or update the admin login with `yarn supabase:seed-admin` or
+   `yarn supabase:seed-admin:production`.
+5. Sign into the app and verify the user has an active `public.user_profiles`
+   row with the correct `app_role`.
+
+### Seed and Provisioning Files
+
+The current seed and setup files serve different purposes:
+
+- `supabase/seed.sql`
+  - local SQL seed kept for reset-based workflows, if they are ever needed
+- `supabase/seed-reference-data.mjs`
+  - hosted reference-data seed for products, variants, materials, and suppliers
+- `supabase/provision-admin-user.mjs`
+  - creates or updates the password-capable administrator user through the
+    Supabase Auth Admin API
+- `supabase/env.mjs`
+  - shared `.env` file loader for hosted Supabase scripts
+
+### Current Operational Validation Steps
+
+After pushing migrations and seeding hosted data, verify the following:
+
+- the authenticated user can read `products`, `product_variants`, `materials`,
+  `suppliers`, `purchases`, `inventory_lots`, and `production_batches`
+- the user has an active role in `public.user_profiles`
+- the operations workspace loads without `403` responses from Supabase REST
+- purchase entry creates inventory lots
+- production entry consumes open lots and produces batch output cost
+
 ## Immediate Deliverables
 
 Start the project with these artifacts:

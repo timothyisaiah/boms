@@ -218,13 +218,17 @@ code {
   padding: 1.5rem;
   border-radius: 28px;
   background:
+    radial-gradient(
+      circle at top right,
+      rgba(217, 169, 82, 0.18),
+      transparent 24%
+    ),
+    radial-gradient(circle at 18% 82%, rgba(35, 66, 50, 0.1), transparent 18%),
     linear-gradient(
       135deg,
       rgba(255, 246, 223, 0.96),
       rgba(255, 255, 255, 0.92)
-    ),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d9a952' fill-opacity='0.12'%3E%3Cpath d='M90 0l25.98 15v30L90 60 64.02 45V15zM38.04 30L64.02 45v30L38.04 90 12.06 75V45zM141.96 30l25.98 15v30l-25.98 15-25.98-15V45zM90 60l25.98 15v30L90 120l-25.98-15V75z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-      right center / 220px no-repeat;
+    );
   box-shadow: var(--boms-shadow);
 }
 
@@ -303,6 +307,78 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+}
+
+.operations-banner {
+  padding: 1rem 1.15rem;
+}
+
+.operations-metric-card__value {
+  margin-top: 1rem;
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  font-weight: 700;
+  color: var(--boms-cocoa);
+}
+
+.operations-reference-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.operations-subheading {
+  font-weight: 700;
+  color: var(--boms-cocoa);
+}
+
+.summary-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.inline-form-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.line-item-stack,
+.list-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.line-item-card,
+.list-card,
+.empty-state {
+  border-radius: 20px;
+  background: rgba(255, 248, 238, 0.9);
+}
+
+.line-item-card,
+.list-card {
+  padding: 1rem;
+}
+
+.line-item-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.form-footer {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.empty-state {
+  padding: 1rem 1.05rem;
+  color: rgba(32, 22, 13, 0.78);
+  line-height: 1.6;
 }
 
 .auth-page {
@@ -447,6 +523,11 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .inline-form-grid,
+  .line-item-grid {
+    grid-template-columns: 1fr;
+  }
+
   .page-hero {
     background-size: 160px;
   }
@@ -465,7 +546,8 @@ code {
 
   .page-hero,
   .auth-card__header,
-  .topbar-user {
+  .topbar-user,
+  .form-footer {
     flex-direction: column;
     align-items: flex-start;
   }

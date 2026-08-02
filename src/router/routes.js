@@ -34,7 +34,7 @@ const routes = [
         name: 'operations',
         component: () => import('@/pages/OperationsPage.vue'),
         meta: {
-          title: 'Operations workspace',
+          title: 'Supply and production control tower',
           allowedRoles: [
             'admin_owner',
             'operations_manager',

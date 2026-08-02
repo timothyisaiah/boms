@@ -2,14 +2,15 @@
   <q-page class="page-layout">
     <section class="page-hero">
       <div>
-        <p class="page-hero__eyebrow">MVP foundation</p>
+        <p class="page-hero__eyebrow">Foundation plus phase 2</p>
         <h1 class="page-hero__title"
-          >Authentication is now the front door to BOMS.</h1
+          >BOMS now covers secure access and the first real supply workflow.</h1
         >
         <p class="page-hero__body">
-          The Beecone app now has Supabase-backed session handling, protected
-          routes, and role-aware navigation so future inventory, production,
-          retail, and finance modules can layer onto a secure base.
+          The Beecone app now combines Supabase-backed authentication with
+          seeded catalogue masters, purchase receipt entry, material lot
+          tracking, and production batch costing so the MVP can move from shell
+          screens into transactional truth.
         </p>
       </div>
 
@@ -121,21 +122,21 @@ const metrics = [
     text: 'Unauthenticated users are redirected to sign in before any workspace loads.'
   },
   {
-    label: 'Roles',
-    title: 'Route-level access control',
-    text: 'Operations, retail, finance, and admin screens now honor the BOMS role matrix.'
+    label: 'Supply',
+    title: 'Receipts become inventory lots',
+    text: 'Phase 2 now records honey and packaging purchases as auditable material lots ready for production consumption.'
   },
   {
-    label: 'Platform',
-    title: 'Supabase-ready auth flow',
-    text: 'Session persistence and sign-out are wired to Supabase, with safe fallbacks when env keys are missing.'
+    label: 'Production',
+    title: 'Batch costing is centralized',
+    text: 'Production batches now consume real lots and calculate repeatable cost per jar in the database layer.'
   }
 ]
 
 const allWorkspaces = [
   {
     title: 'Operations workspace',
-    text: 'Purchasing, production, and warehouse batch flows.',
+    text: 'Purchasing, material lots, production batches, and output costing.',
     to: '/operations',
     icon: 'warehouse',
     allowedRoles: [
