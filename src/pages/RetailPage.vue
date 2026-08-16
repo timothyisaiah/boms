@@ -1,5 +1,5 @@
 <template>
-  <q-page class="page-layout">
+  <q-page class="page-layout operations-page">
     <section class="page-hero">
       <div>
         <p class="page-hero__eyebrow">Distribution</p>
@@ -46,7 +46,7 @@
       {{ loadError }}
     </q-banner>
 
-    <section class="card-grid card-grid--three">
+    <section class="card-grid card-grid--three operations-page__metrics">
       <q-card
         v-for="metric in metrics"
         :key="metric.title"
@@ -62,373 +62,418 @@
       </q-card>
     </section>
 
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Warehouse stock</div>
-          <div class="section-title">Finished jars available by batch</div>
-        </q-card-section>
+    <section>
+      <q-card flat class="surface-card operations-workspace-shell">
+        <q-card-section class="operations-workspace-shell__header">
+          <div>
+            <div class="section-label">Workspace</div>
+            <div class="section-title">Forms and records</div>
+          </div>
 
-        <q-card-section v-if="openFinishedStock.length > 0" class="list-stack">
-          <article
-            v-for="stock in openFinishedStock"
-            :key="stock.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{
-                stock.batch?.batch_code ?? `Batch ${stock.id}`
-              }}</strong>
-              <q-chip square color="green-1" text-color="green-10">
-                {{ formatQuantity(stock.quantity_remaining) }} /
-                {{ formatQuantity(stock.quantity_produced) }} jars left
-              </q-chip>
-            </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ stock.variant?.variant_name ?? 'Unknown variant' }} /
-              {{ stock.variant?.sku ?? 'No SKU' }} /
-              {{ formatMoney(stock.unit_cost) }} per jar
-            </div>
-
-            <div class="text-caption text-grey-7 q-mt-xs">
-              Produced {{ formatDate(stock.batch?.started_at) }} /
-              {{ stock.variant?.pack_size_grams ?? 'Unknown' }}g /
-              {{ stock.variant?.flavor ?? 'Classic' }}
-            </div>
-          </article>
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="empty-state">
-            No finished stock is open yet. Complete a production batch to start
-            issuing stock.
+          <div class="summary-pill-row">
+            <q-chip square color="amber-2" text-color="brown-10">
+              {{ openFinishedStock.length }} open batches
+            </q-chip>
+            <q-chip
+              square
+              :color="workspace.mode === 'live' ? 'green-1' : 'brown-2'"
+              :text-color="workspace.mode === 'live' ? 'green-10' : 'brown-10'"
+            >
+              {{ workspace.mode === 'live' ? 'Live mode' : 'Preview mode' }}
+            </q-chip>
           </div>
         </q-card-section>
-      </q-card>
 
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Distribution workflow</div>
-          <div class="section-title">Issue stock to retailers</div>
-        </q-card-section>
+        <q-tabs
+          v-model="activeWorkspaceTab"
+          align="left"
+          inline-label
+          outside-arrows
+          mobile-arrows
+          indicator-color="primary"
+          active-color="brown-10"
+          class="operations-tabs"
+        >
+          <q-tab name="snapshot" icon="insights" label="Snapshot" />
+          <q-tab name="issue-entry" icon="local_shipping" label="Issue stock" />
+          <q-tab
+            name="movements"
+            icon="swap_horiz"
+            :label="`Movements (${workspace.retailerMovements.length})`"
+          />
+          <q-tab
+            name="dispatches"
+            icon="inventory_2"
+            :label="`Dispatches (${workspace.stockIssues.length})`"
+          />
+        </q-tabs>
 
-        <q-card-section>
-          <q-banner
-            v-if="issueWritesDisabled"
-            rounded
-            class="bg-grey-2 text-grey-9 q-mb-md"
-          >
-            {{ issueWriteMessage }}
-          </q-banner>
+        <q-separator />
 
-          <q-form @submit.prevent="submitStockIssue">
-            <div class="inline-form-grid">
-              <q-select
-                v-model="issueForm.retailerId"
-                outlined
-                emit-value
-                map-options
-                :disable="issueWritesDisabled || retailerOptions.length === 0"
-                :options="retailerOptions"
-                label="Retail partner"
-              />
+        <q-tab-panels
+          v-model="activeWorkspaceTab"
+          animated
+          class="bg-transparent operations-tab-panels"
+        >
+          <q-tab-panel name="snapshot" class="operations-tab-panel">
+            <section class="card-grid card-grid--two">
+              <div class="operations-tab-block">
+                <div class="section-label">Warehouse stock</div>
+                <div class="section-title">Finished jars available by batch</div>
 
-              <q-input
-                v-model="issueForm.issuedOn"
-                outlined
-                type="date"
-                :disable="issueWritesDisabled"
-                label="Issue date"
-              />
+                <div v-if="openFinishedStock.length > 0" class="list-stack q-mt-lg">
+                  <article
+                    v-for="stock in openFinishedStock"
+                    :key="stock.id"
+                    class="list-card"
+                  >
+                    <div class="detail-row">
+                      <strong>{{
+                        stock.batch?.batch_code ?? `Batch ${stock.id}`
+                      }}</strong>
+                      <q-chip square color="green-1" text-color="green-10">
+                        {{ formatQuantity(stock.quantity_remaining) }} /
+                        {{ formatQuantity(stock.quantity_produced) }} jars left
+                      </q-chip>
+                    </div>
 
-              <q-input
-                v-model="issueForm.issueReference"
-                outlined
-                :disable="issueWritesDisabled"
-                label="Dispatch reference"
-                hint="Optional delivery note or van sheet"
-              />
+                    <div class="text-body2 text-grey-8 q-mt-sm">
+                      {{ stock.variant?.variant_name ?? 'Unknown variant' }} /
+                      {{ stock.variant?.sku ?? 'No SKU' }} /
+                      {{ formatMoney(stock.unit_cost) }} per jar
+                    </div>
 
-              <q-input
-                v-model="issueForm.notes"
-                outlined
-                type="textarea"
-                autogrow
-                :disable="issueWritesDisabled"
-                label="Notes"
-              />
-            </div>
-
-            <div class="operations-subheading q-mt-lg">Issued lines</div>
-
-            <div class="line-item-stack q-mt-sm">
-              <article
-                v-for="(item, index) in issueForm.items"
-                :key="item.key"
-                class="line-item-card"
-              >
-                <div class="detail-row">
-                  <strong>Line {{ index + 1 }}</strong>
-                  <q-btn
-                    v-if="issueForm.items.length > 1"
-                    flat
-                    round
-                    dense
-                    type="button"
-                    color="negative"
-                    icon="delete"
-                    :disable="issueWritesDisabled"
-                    @click="removeIssueLine(item.key)"
-                  />
+                    <div class="text-caption text-grey-7 q-mt-xs">
+                      Produced {{ formatDate(stock.batch?.started_at) }} /
+                      {{ stock.variant?.pack_size_grams ?? 'Unknown' }}g /
+                      {{ stock.variant?.flavor ?? 'Classic' }}
+                    </div>
+                  </article>
                 </div>
 
-                <div class="line-item-grid line-item-grid--two q-mt-md">
+                <div v-else class="empty-state q-mt-lg">
+                  No finished stock is open yet. Complete a production batch to
+                  start issuing stock.
+                </div>
+              </div>
+
+              <div class="operations-tab-block">
+                <div class="section-label">Retail stock view</div>
+                <div class="section-title">What each partner is currently holding</div>
+
+                <div v-if="retailerBalances.length > 0" class="list-stack q-mt-lg">
+                  <article
+                    v-for="balance in retailerBalances"
+                    :key="balance.retailerId"
+                    class="list-card"
+                  >
+                    <div class="detail-row">
+                      <strong>{{ balance.retailerName }}</strong>
+                      <q-chip
+                        square
+                        :color="balance.totalUnits > 0 ? 'green-1' : 'grey-2'"
+                        :text-color="
+                          balance.totalUnits > 0 ? 'green-10' : 'grey-8'
+                        "
+                      >
+                        {{ formatQuantity(balance.totalUnits) }} jars on hand
+                      </q-chip>
+                    </div>
+
+                    <div class="text-body2 text-grey-8 q-mt-sm">
+                      {{ balance.deliveryLocation || 'Delivery location pending' }}
+                    </div>
+
+                    <div
+                      v-if="balance.lines.length > 0"
+                      class="summary-pill-row q-mt-sm"
+                    >
+                      <q-chip
+                        v-for="line in balance.lines"
+                        :key="line.key"
+                        square
+                        color="grey-2"
+                        text-color="grey-9"
+                      >
+                        {{ line.variantSku }} / {{ line.batchCode }} /
+                        {{ formatQuantity(line.quantity) }} jars
+                      </q-chip>
+                    </div>
+
+                    <div v-else class="text-caption text-grey-7 q-mt-sm">
+                      No open retail stock movements yet.
+                    </div>
+                  </article>
+                </div>
+
+                <div v-else class="empty-state q-mt-lg">
+                  Retail balances will appear here after the first stock issue is
+                  posted to a partner.
+                </div>
+              </div>
+            </section>
+          </q-tab-panel>
+
+          <q-tab-panel name="issue-entry" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Distribution workflow</div>
+              <div class="section-title">Issue stock to retailers</div>
+
+              <div class="text-body2 text-grey-8 q-mt-sm">
+                Dispatch traced finished stock to partners without losing batch
+                costing context.
+              </div>
+
+              <q-banner
+                v-if="issueWritesDisabled"
+                rounded
+                class="bg-grey-2 text-grey-9 q-mt-lg"
+              >
+                {{ issueWriteMessage }}
+              </q-banner>
+
+              <q-form class="q-mt-lg" @submit.prevent="submitStockIssue">
+                <div class="inline-form-grid">
                   <q-select
-                    v-model="item.productionOutputId"
+                    v-model="issueForm.retailerId"
                     outlined
                     emit-value
                     map-options
-                    :disable="
-                      issueWritesDisabled || finishedStockOptions.length === 0
-                    "
-                    :options="finishedStockOptions"
-                    label="Finished batch"
+                    :disable="issueWritesDisabled || retailerOptions.length === 0"
+                    :options="retailerOptions"
+                    label="Retail partner"
                   />
 
                   <q-input
-                    v-model="item.quantity"
+                    v-model="issueForm.issuedOn"
                     outlined
-                    type="number"
-                    min="1"
-                    step="1"
+                    type="date"
                     :disable="issueWritesDisabled"
-                    label="Jars issued"
+                    label="Issue date"
+                  />
+
+                  <q-input
+                    v-model="issueForm.issueReference"
+                    outlined
+                    :disable="issueWritesDisabled"
+                    label="Dispatch reference"
+                    hint="Optional delivery note or van sheet"
+                  />
+
+                  <q-input
+                    v-model="issueForm.notes"
+                    outlined
+                    type="textarea"
+                    autogrow
+                    :disable="issueWritesDisabled"
+                    label="Notes"
                   />
                 </div>
 
-                <div
-                  v-if="resolveFinishedStock(item.productionOutputId)"
-                  class="text-caption text-grey-7 q-mt-sm"
-                >
-                  {{
-                    resolveFinishedStock(item.productionOutputId).variant
-                      ?.variant_name ?? 'Finished stock'
-                  }}
-                  /
-                  {{
-                    resolveFinishedStock(item.productionOutputId).batch
-                      ?.batch_code ?? 'Batch'
-                  }}
-                  /
-                  {{
-                    formatQuantity(
-                      resolveFinishedStock(item.productionOutputId)
-                        .quantity_remaining
-                    )
-                  }}
-                  jars currently open at
-                  {{
-                    formatMoney(
-                      resolveFinishedStock(item.productionOutputId).unit_cost
-                    )
-                  }}
+                <div class="operations-subheading q-mt-lg">Issued lines</div>
+
+                <div class="line-item-stack q-mt-sm">
+                  <article
+                    v-for="(item, index) in issueForm.items"
+                    :key="item.key"
+                    class="line-item-card"
+                  >
+                    <div class="detail-row">
+                      <strong>Line {{ index + 1 }}</strong>
+                      <q-btn
+                        v-if="issueForm.items.length > 1"
+                        flat
+                        round
+                        dense
+                        type="button"
+                        color="negative"
+                        icon="delete"
+                        :disable="issueWritesDisabled"
+                        @click="removeIssueLine(item.key)"
+                      />
+                    </div>
+
+                    <div class="line-item-grid line-item-grid--two q-mt-md">
+                      <q-select
+                        v-model="item.productionOutputId"
+                        outlined
+                        emit-value
+                        map-options
+                        :disable="
+                          issueWritesDisabled || finishedStockOptions.length === 0
+                        "
+                        :options="finishedStockOptions"
+                        label="Finished batch"
+                      />
+
+                      <q-input
+                        v-model="item.quantity"
+                        outlined
+                        type="number"
+                        min="1"
+                        step="1"
+                        :disable="issueWritesDisabled"
+                        label="Jars issued"
+                      />
+                    </div>
+
+                    <div
+                      v-if="resolveFinishedStock(item.productionOutputId)"
+                      class="text-caption text-grey-7 q-mt-sm"
+                    >
+                      {{
+                        resolveFinishedStock(item.productionOutputId).variant
+                          ?.variant_name ?? 'Finished stock'
+                      }}
+                      /
+                      {{
+                        resolveFinishedStock(item.productionOutputId).batch
+                          ?.batch_code ?? 'Batch'
+                      }}
+                      /
+                      {{
+                        formatQuantity(
+                          resolveFinishedStock(item.productionOutputId)
+                            .quantity_remaining
+                        )
+                      }}
+                      jars currently open at
+                      {{
+                        formatMoney(
+                          resolveFinishedStock(item.productionOutputId).unit_cost
+                        )
+                      }}
+                    </div>
+                  </article>
                 </div>
-              </article>
+
+                <div class="form-footer">
+                  <div class="summary-pill-row">
+                    <q-btn
+                      flat
+                      color="secondary"
+                      no-caps
+                      icon="add"
+                      type="button"
+                      label="Add line"
+                      :disable="issueWritesDisabled"
+                      @click="addIssueLine"
+                    />
+
+                    <q-chip square color="amber-2" text-color="brown-10">
+                      Estimated issue:
+                      {{ formatQuantity(estimatedIssueQuantity) }} jars
+                    </q-chip>
+
+                    <q-chip square color="blue-1" text-color="blue-10">
+                      Estimated stock value:
+                      {{ formatMoney(estimatedIssueCost) }}
+                    </q-chip>
+                  </div>
+
+                  <q-btn
+                    color="primary"
+                    no-caps
+                    type="submit"
+                    label="Issue stock"
+                    :disable="issueWritesDisabled"
+                    :loading="isSubmittingIssue"
+                  />
+                </div>
+              </q-form>
             </div>
+          </q-tab-panel>
 
-            <div class="form-footer">
-              <div class="summary-pill-row">
-                <q-btn
-                  flat
-                  color="secondary"
-                  no-caps
-                  icon="add"
-                  type="button"
-                  label="Add line"
-                  :disable="issueWritesDisabled"
-                  @click="addIssueLine"
-                />
+          <q-tab-panel name="movements" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Movement history</div>
+              <div class="section-title">Recent retailer ledger entries</div>
 
-                <q-chip square color="amber-2" text-color="brown-10">
-                  Estimated issue:
-                  {{ formatQuantity(estimatedIssueQuantity) }} jars
-                </q-chip>
+              <div v-if="movementHistory.length > 0" class="list-stack q-mt-lg">
+                <article
+                  v-for="movement in movementHistory"
+                  :key="movement.id"
+                  class="list-card"
+                >
+                  <div class="detail-row">
+                    <strong>{{
+                      movement.retailer?.retailer_name ?? 'Retailer'
+                    }}</strong>
+                    <q-chip square color="amber-2" text-color="brown-10">
+                      {{ formatMovementType(movement.movement_type) }}
+                    </q-chip>
+                  </div>
 
-                <q-chip square color="blue-1" text-color="blue-10">
-                  Estimated stock value:
-                  {{ formatMoney(estimatedIssueCost) }}
-                </q-chip>
+                  <div class="text-body2 text-grey-8 q-mt-sm">
+                    {{ movement.variant?.sku ?? 'Variant' }} /
+                    {{ movement.batch?.batch_code ?? 'Batch' }} /
+                    {{ formatSignedQuantity(movement.quantity_delta) }} jars
+                  </div>
+
+                  <div class="text-caption text-grey-7 q-mt-xs">
+                    {{ formatDate(movement.moved_at) }} /
+                    {{ formatMoney(movement.unit_cost) }} per jar
+                  </div>
+                </article>
               </div>
 
-              <q-btn
-                color="primary"
-                no-caps
-                type="submit"
-                label="Issue stock"
-                :disable="issueWritesDisabled"
-                :loading="isSubmittingIssue"
-              />
+              <div v-else class="empty-state q-mt-lg">
+                Retail movement history will start once warehouse stock is issued
+                to a partner.
+              </div>
             </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </section>
+          </q-tab-panel>
 
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Retail stock view</div>
-          <div class="section-title"
-            >What each partner is currently holding</div
-          >
-        </q-card-section>
+          <q-tab-panel name="dispatches" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Issue documents</div>
+              <div class="section-title">Recent dispatch records</div>
 
-        <q-card-section v-if="retailerBalances.length > 0" class="list-stack">
-          <article
-            v-for="balance in retailerBalances"
-            :key="balance.retailerId"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{ balance.retailerName }}</strong>
-              <q-chip
-                square
-                :color="balance.totalUnits > 0 ? 'green-1' : 'grey-2'"
-                :text-color="balance.totalUnits > 0 ? 'green-10' : 'grey-8'"
+              <div
+                v-if="workspace.stockIssues.length > 0"
+                class="list-stack q-mt-lg"
               >
-                {{ formatQuantity(balance.totalUnits) }} jars on hand
-              </q-chip>
+                <article
+                  v-for="issue in workspace.stockIssues"
+                  :key="issue.id"
+                  class="list-card"
+                >
+                  <div class="detail-row">
+                    <strong>{{ issueDocumentLabel(issue) }}</strong>
+                    <q-chip square color="blue-1" text-color="blue-10">
+                      {{ formatQuantity(issue.total_quantity) }} jars
+                    </q-chip>
+                  </div>
+
+                  <div class="text-body2 text-grey-8 q-mt-sm">
+                    {{ issue.retailer?.retailer_name ?? 'Retailer' }} /
+                    {{ formatDate(issue.issued_at) }} /
+                    {{ formatMoney(issue.total_cost) }}
+                  </div>
+
+                  <div class="summary-pill-row q-mt-sm">
+                    <q-chip
+                      v-for="item in issue.items ?? []"
+                      :key="item.id"
+                      square
+                      color="grey-2"
+                      text-color="grey-9"
+                    >
+                      {{ item.variant?.sku ?? 'Variant' }} /
+                      {{ item.batch?.batch_code ?? 'Batch' }} /
+                      {{ formatQuantity(item.quantity_issued) }} jars
+                    </q-chip>
+                  </div>
+                </article>
+              </div>
+
+              <div v-else class="empty-state q-mt-lg">
+                Dispatch records will appear here after the first retailer issue
+                is saved.
+              </div>
             </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ balance.deliveryLocation || 'Delivery location pending' }}
-            </div>
-
-            <div
-              v-if="balance.lines.length > 0"
-              class="summary-pill-row q-mt-sm"
-            >
-              <q-chip
-                v-for="line in balance.lines"
-                :key="line.key"
-                square
-                color="grey-2"
-                text-color="grey-9"
-              >
-                {{ line.variantSku }} / {{ line.batchCode }} /
-                {{ formatQuantity(line.quantity) }} jars
-              </q-chip>
-            </div>
-
-            <div v-else class="text-caption text-grey-7 q-mt-sm">
-              No open retail stock movements yet.
-            </div>
-          </article>
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="empty-state">
-            Retail balances will appear here after the first stock issue is
-            posted to a partner.
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Movement history</div>
-          <div class="section-title">Recent retailer ledger entries</div>
-        </q-card-section>
-
-        <q-card-section v-if="movementHistory.length > 0" class="list-stack">
-          <article
-            v-for="movement in movementHistory"
-            :key="movement.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{
-                movement.retailer?.retailer_name ?? 'Retailer'
-              }}</strong>
-              <q-chip square color="amber-2" text-color="brown-10">
-                {{ formatMovementType(movement.movement_type) }}
-              </q-chip>
-            </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ movement.variant?.sku ?? 'Variant' }} /
-              {{ movement.batch?.batch_code ?? 'Batch' }} /
-              {{ formatSignedQuantity(movement.quantity_delta) }} jars
-            </div>
-
-            <div class="text-caption text-grey-7 q-mt-xs">
-              {{ formatDate(movement.moved_at) }} /
-              {{ formatMoney(movement.unit_cost) }} per jar
-            </div>
-          </article>
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="empty-state">
-            Retail movement history will start once warehouse stock is issued to
-            a partner.
-          </div>
-        </q-card-section>
-      </q-card>
-    </section>
-
-    <section>
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Issue documents</div>
-          <div class="section-title">Recent dispatch records</div>
-        </q-card-section>
-
-        <q-card-section
-          v-if="workspace.stockIssues.length > 0"
-          class="list-stack"
-        >
-          <article
-            v-for="issue in workspace.stockIssues"
-            :key="issue.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{ issueDocumentLabel(issue) }}</strong>
-              <q-chip square color="blue-1" text-color="blue-10">
-                {{ formatQuantity(issue.total_quantity) }} jars
-              </q-chip>
-            </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ issue.retailer?.retailer_name ?? 'Retailer' }} /
-              {{ formatDate(issue.issued_at) }} /
-              {{ formatMoney(issue.total_cost) }}
-            </div>
-
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip
-                v-for="item in issue.items ?? []"
-                :key="item.id"
-                square
-                color="grey-2"
-                text-color="grey-9"
-              >
-                {{ item.variant?.sku ?? 'Variant' }} /
-                {{ item.batch?.batch_code ?? 'Batch' }} /
-                {{ formatQuantity(item.quantity_issued) }} jars
-              </q-chip>
-            </div>
-          </article>
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="empty-state">
-            Dispatch records will appear here after the first retailer issue is
-            saved.
-          </div>
-        </q-card-section>
+          </q-tab-panel>
+        </q-tab-panels>
       </q-card>
     </section>
   </q-page>
@@ -484,6 +529,7 @@ function toIsoTimestamp(dateValue) {
 
 const $q = useQuasar()
 const workspace = ref(getPreviewRetailWorkspace())
+const activeWorkspaceTab = ref('snapshot')
 const isLoading = ref(false)
 const isSubmittingIssue = ref(false)
 const loadError = ref('')
@@ -661,21 +707,21 @@ const activeRetailerBalances = computed(
 const metrics = computed(() => [
   {
     label: 'Partners',
-    title: 'Retailers ready for dispatch',
-    value: `${workspace.value.retailers.length}`,
-    text: 'Retail partners are ready for dispatch, review, and follow-up.'
+    title: 'Retailers ready',
+    value: `${workspace.value.retailers.length} listed`,
+    text: 'Ready for stock issue.'
   },
   {
     label: 'Warehouse',
-    title: 'Open finished stock by batch',
+    title: 'Open jars',
     value: `${formatQuantity(totalOpenUnits.value)} jars`,
-    text: 'Finished goods stay visible by batch so issues keep costing context.'
+    text: `${openFinishedStock.value.length} batch lines available.`
   },
   {
     label: 'Distribution',
-    title: 'Retailers carrying issued stock',
+    title: 'Partners with stock',
     value: `${activeRetailerBalances.value}`,
-    text: 'The retailer ledger shows who is holding stock before settlement.'
+    text: 'Currently holding issued jars.'
   }
 ])
 

@@ -1,5 +1,5 @@
 <template>
-  <q-page class="page-layout">
+  <q-page class="page-layout operations-page">
     <section class="page-hero">
       <div>
         <p class="page-hero__eyebrow">Operations</p>
@@ -54,7 +54,7 @@
       {{ actionFeedback.message }}
     </q-banner>
 
-    <section class="card-grid card-grid--three">
+    <section class="card-grid card-grid--three operations-page__metrics">
       <q-card
         v-for="metric in metrics"
         :key="metric.title"
@@ -70,540 +70,578 @@
       </q-card>
     </section>
 
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Reference deck</div>
-          <div class="section-title">
-            Seeded variants, materials, and suppliers
-          </div>
-        </q-card-section>
-
-        <q-card-section class="operations-reference-grid">
+    <section>
+      <q-card flat class="surface-card operations-workspace-shell">
+        <q-card-section class="operations-workspace-shell__header">
           <div>
-            <div class="operations-subheading">Product variants</div>
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip
-                v-for="variant in workspace.variants"
-                :key="variant.id"
-                square
-                color="amber-2"
-                text-color="brown-10"
-              >
-                {{ variant.sku }} / {{ variant.variant_name }}
-              </q-chip>
-            </div>
+            <div class="section-label">Workspace</div>
+            <div class="section-title">Forms and records</div>
           </div>
 
-          <div>
-            <div class="operations-subheading">Material catalogue</div>
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip
-                v-for="material in workspace.materials"
-                :key="material.id"
-                square
-                color="green-1"
-                text-color="green-10"
-              >
-                {{ material.name }} / {{ formatMaterialKind(material.kind) }}
-              </q-chip>
-            </div>
-          </div>
-
-          <div>
-            <div class="operations-subheading">Supplier pool</div>
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip
-                v-for="supplier in workspace.suppliers"
-                :key="supplier.id"
-                square
-                color="blue-1"
-                text-color="blue-10"
-              >
-                {{ supplier.supplier_name }}
-              </q-chip>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Open material lots</div>
-          <div class="section-title">What production can consume right now</div>
-        </q-card-section>
-
-        <q-card-section v-if="openInventoryLots.length > 0" class="list-stack">
-          <article
-            v-for="lot in openInventoryLots"
-            :key="lot.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{ lot.material?.name ?? 'Material lot' }}</strong>
-              <q-chip square color="amber-2" text-color="brown-10">
-                {{ lot.lot_code }}
-              </q-chip>
-            </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ formatQuantity(lot.quantity_remaining) }}
-              {{ lot.material?.unit_of_measure ?? 'units' }} remaining at
-              {{ formatMoney(lot.unit_cost) }} each
-            </div>
-
-            <div class="text-caption text-grey-7 q-mt-xs">
-              {{ lot.supplier?.supplier_name ?? 'Unknown supplier' }} / received
-              {{ formatDate(lot.received_at) }}
-            </div>
-          </article>
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="empty-state">
-            No open material lots yet. Record a purchase receipt to stock
-            production.
-          </div>
-        </q-card-section>
-      </q-card>
-    </section>
-
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Purchasing workflow</div>
-          <div class="section-title">Receive honey and packaging into lots</div>
-        </q-card-section>
-
-        <q-card-section>
-          <q-banner
-            v-if="purchaseWritesDisabled"
-            rounded
-            class="bg-grey-2 text-grey-9 q-mb-md"
-          >
-            Live purchase writes need a connected Supabase project with the
-            latest migrations.
-          </q-banner>
-
-          <q-form @submit.prevent="submitPurchase">
-            <div class="inline-form-grid">
-              <q-select
-                v-model="purchaseForm.supplierId"
-                outlined
-                emit-value
-                map-options
-                :disable="
-                  purchaseWritesDisabled || supplierOptions.length === 0
-                "
-                :options="supplierOptions"
-                label="Supplier"
-              />
-
-              <q-input
-                v-model="purchaseForm.purchasedOn"
-                outlined
-                type="date"
-                :disable="purchaseWritesDisabled"
-                label="Purchase date"
-              />
-
-              <q-input
-                v-model="purchaseForm.purchaseReference"
-                outlined
-                :disable="purchaseWritesDisabled"
-                label="Reference"
-                hint="Optional invoice or delivery note"
-              />
-
-              <q-input
-                v-model="purchaseForm.notes"
-                outlined
-                type="textarea"
-                autogrow
-                :disable="purchaseWritesDisabled"
-                label="Notes"
-              />
-            </div>
-
-            <div class="operations-subheading q-mt-lg">Line items</div>
-
-            <div class="line-item-stack q-mt-sm">
-              <article
-                v-for="(item, index) in purchaseForm.items"
-                :key="item.key"
-                class="line-item-card"
-              >
-                <div class="detail-row">
-                  <strong>Line {{ index + 1 }}</strong>
-                  <q-btn
-                    v-if="purchaseForm.items.length > 1"
-                    flat
-                    round
-                    dense
-                    type="button"
-                    color="negative"
-                    icon="delete"
-                    :disable="purchaseWritesDisabled"
-                    @click="removePurchaseLine(item.key)"
-                  />
-                </div>
-
-                <div class="line-item-grid q-mt-md">
-                  <q-select
-                    v-model="item.materialId"
-                    outlined
-                    emit-value
-                    map-options
-                    :disable="
-                      purchaseWritesDisabled || materialOptions.length === 0
-                    "
-                    :options="materialOptions"
-                    label="Material"
-                  />
-
-                  <q-input
-                    v-model="item.quantity"
-                    outlined
-                    type="number"
-                    min="0"
-                    step="0.001"
-                    :disable="purchaseWritesDisabled"
-                    label="Quantity"
-                  />
-
-                  <q-input
-                    v-model="item.unitCost"
-                    outlined
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    :disable="purchaseWritesDisabled"
-                    label="Unit cost (UGX)"
-                  />
-
-                  <q-input
-                    v-model="item.lotCode"
-                    outlined
-                    :disable="purchaseWritesDisabled"
-                    label="Lot code"
-                    hint="Optional, auto-generated when blank"
-                  />
-                </div>
-              </article>
-            </div>
-
-            <div class="form-footer">
-              <div class="summary-pill-row">
-                <q-btn
-                  flat
-                  color="secondary"
-                  no-caps
-                  icon="add"
-                  type="button"
-                  label="Add line"
-                  :disable="purchaseWritesDisabled"
-                  @click="addPurchaseLine"
-                />
-
-                <q-chip square color="amber-2" text-color="brown-10">
-                  Estimated receipt total: {{ formatMoney(purchaseTotal) }}
-                </q-chip>
-              </div>
-
-              <q-btn
-                color="primary"
-                no-caps
-                type="submit"
-                label="Record purchase"
-                :disable="purchaseWritesDisabled"
-                :loading="isSubmittingPurchase"
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Production workflow</div>
-          <div class="section-title">
-            Consume lots and create finished output
+          <div class="summary-pill-row">
+            <q-chip square color="amber-2" text-color="brown-10">
+              {{ openInventoryLots.length }} open lots
+            </q-chip>
+            <q-chip
+              square
+              :color="workspace.mode === 'live' ? 'green-1' : 'brown-2'"
+              :text-color="workspace.mode === 'live' ? 'green-10' : 'brown-10'"
+            >
+              {{ workspace.mode === 'live' ? 'Live mode' : 'Preview mode' }}
+            </q-chip>
           </div>
         </q-card-section>
 
-        <q-card-section>
-          <q-banner
-            v-if="batchWritesDisabled"
-            rounded
-            class="bg-grey-2 text-grey-9 q-mb-md"
-          >
-            Production entry unlocks after live material lots exist. Record at
-            least one purchase receipt first, then create a batch from the open
-            lots above.
-          </q-banner>
-
-          <q-form @submit.prevent="submitProductionBatch">
-            <div class="inline-form-grid">
-              <q-select
-                v-model="batchForm.variantId"
-                outlined
-                emit-value
-                map-options
-                :disable="batchWritesDisabled || variantOptions.length === 0"
-                :options="variantOptions"
-                label="Finished variant"
-              />
-
-              <q-input
-                v-model="batchForm.startedOn"
-                outlined
-                type="date"
-                :disable="batchWritesDisabled"
-                label="Batch date"
-              />
-
-              <q-input
-                v-model="batchForm.batchCode"
-                outlined
-                :disable="batchWritesDisabled"
-                label="Batch code"
-                hint="Auto-suggested and incremented by date"
-              />
-
-              <q-input
-                v-model="batchForm.outputQuantity"
-                outlined
-                type="number"
-                min="1"
-                step="1"
-                :disable="batchWritesDisabled"
-                label="Jars produced"
-              />
-
-              <q-input
-                v-model="batchForm.notes"
-                outlined
-                type="textarea"
-                autogrow
-                :disable="batchWritesDisabled"
-                label="Batch notes"
-              />
-            </div>
-
-            <div class="operations-subheading q-mt-lg">Consumed inputs</div>
-
-            <div class="line-item-stack q-mt-sm">
-              <article
-                v-for="(input, index) in batchForm.inputs"
-                :key="input.key"
-                class="line-item-card"
-              >
-                <div class="detail-row">
-                  <strong>Input {{ index + 1 }}</strong>
-                  <q-btn
-                    v-if="batchForm.inputs.length > 1"
-                    flat
-                    round
-                    dense
-                    type="button"
-                    color="negative"
-                    icon="delete"
-                    :disable="batchWritesDisabled"
-                    @click="removeBatchInput(input.key)"
-                  />
-                </div>
-
-                <div class="line-item-grid q-mt-md">
-                  <q-select
-                    v-model="input.inventoryLotId"
-                    outlined
-                    emit-value
-                    map-options
-                    :disable="
-                      batchWritesDisabled || inventoryLotOptions.length === 0
-                    "
-                    :options="inventoryLotOptions"
-                    label="Material lot"
-                  />
-
-                  <q-input
-                    v-model="input.quantity"
-                    outlined
-                    type="number"
-                    min="0"
-                    step="0.001"
-                    :disable="batchWritesDisabled"
-                    label="Quantity consumed"
-                  />
-                </div>
-
-                <div
-                  v-if="resolveInventoryLot(input.inventoryLotId)"
-                  class="text-caption text-grey-7 q-mt-sm"
-                >
-                  {{
-                    resolveInventoryLot(input.inventoryLotId).material?.name ??
-                    'Material'
-                  }}
-                  /
-                  {{
-                    formatQuantity(
-                      resolveInventoryLot(input.inventoryLotId)
-                        .quantity_remaining
-                    )
-                  }}
-                  {{
-                    resolveInventoryLot(input.inventoryLotId).material
-                      ?.unit_of_measure ?? 'units'
-                  }}
-                  currently open at
-                  {{
-                    formatMoney(
-                      resolveInventoryLot(input.inventoryLotId).unit_cost
-                    )
-                  }}
-                </div>
-              </article>
-            </div>
-
-            <div class="form-footer">
-              <div class="summary-pill-row">
-                <q-btn
-                  flat
-                  color="secondary"
-                  no-caps
-                  icon="add"
-                  type="button"
-                  label="Add input"
-                  :disable="batchWritesDisabled"
-                  @click="addBatchInput"
-                />
-
-                <q-chip square color="green-1" text-color="green-10">
-                  Estimated input cost:
-                  {{ formatMoney(estimatedBatchInputCost) }}
-                </q-chip>
-
-                <q-chip square color="blue-1" text-color="blue-10">
-                  Estimated cost per jar:
-                  {{ formatMoney(estimatedBatchUnitCost) }}
-                </q-chip>
-              </div>
-
-              <q-btn
-                color="primary"
-                no-caps
-                type="submit"
-                label="Create production batch"
-                :disable="batchWritesDisabled"
-                :loading="isSubmittingBatch"
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </section>
-
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Recent purchases</div>
-          <div class="section-title">Material receipts now recorded</div>
-        </q-card-section>
-
-        <q-card-section
-          v-if="workspace.purchases.length > 0"
-          class="list-stack"
+        <q-tabs
+          v-model="activeWorkspaceTab"
+          align="left"
+          inline-label
+          outside-arrows
+          mobile-arrows
+          indicator-color="primary"
+          active-color="brown-10"
+          class="operations-tabs"
         >
-          <article
-            v-for="purchase in workspace.purchases"
-            :key="purchase.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{ purchaseLabel(purchase) }}</strong>
-              <q-chip square color="amber-2" text-color="brown-10">
-                {{ formatMoney(purchase.total_amount) }}
-              </q-chip>
-            </div>
+          <q-tab name="snapshot" icon="insights" label="Snapshot" />
+          <q-tab name="purchase-entry" icon="receipt_long" label="Receipt form" />
+          <q-tab name="batch-entry" icon="science" label="Batch form" />
+          <q-tab
+            name="purchases"
+            icon="inventory_2"
+            :label="`Purchases (${workspace.purchases.length})`"
+          />
+          <q-tab
+            name="batches"
+            icon="factory"
+            :label="`Batches (${workspace.batches.length})`"
+          />
+        </q-tabs>
 
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ purchase.supplier?.supplier_name ?? 'Unknown supplier' }} /
-              {{ formatDate(purchase.purchased_at) }}
-            </div>
+        <q-separator />
 
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip
-                v-for="item in purchase.items ?? []"
-                :key="item.id"
-                square
-                color="grey-2"
-                text-color="grey-9"
+        <q-tab-panels
+          v-model="activeWorkspaceTab"
+          animated
+          class="bg-transparent operations-tab-panels"
+        >
+          <q-tab-panel name="snapshot" class="operations-tab-panel">
+            <section class="card-grid card-grid--two">
+              <div class="operations-tab-block">
+                <div class="section-label">Reference deck</div>
+                <div class="section-title">Variants, materials, and suppliers</div>
+
+                <div class="operations-reference-grid q-mt-lg">
+                  <div>
+                    <div class="operations-subheading">Product variants</div>
+                    <div class="summary-pill-row q-mt-sm">
+                      <q-chip
+                        v-for="variant in workspace.variants"
+                        :key="variant.id"
+                        square
+                        color="amber-2"
+                        text-color="brown-10"
+                      >
+                        {{ variant.sku }} / {{ variant.variant_name }}
+                      </q-chip>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="operations-subheading">Material catalogue</div>
+                    <div class="summary-pill-row q-mt-sm">
+                      <q-chip
+                        v-for="material in workspace.materials"
+                        :key="material.id"
+                        square
+                        color="green-1"
+                        text-color="green-10"
+                      >
+                        {{ material.name }} / {{ formatMaterialKind(material.kind) }}
+                      </q-chip>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="operations-subheading">Supplier pool</div>
+                    <div class="summary-pill-row q-mt-sm">
+                      <q-chip
+                        v-for="supplier in workspace.suppliers"
+                        :key="supplier.id"
+                        square
+                        color="blue-1"
+                        text-color="blue-10"
+                      >
+                        {{ supplier.supplier_name }}
+                      </q-chip>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="operations-tab-block">
+                <div class="section-label">Open material lots</div>
+                <div class="section-title">What production can consume now</div>
+
+                <div v-if="openInventoryLots.length > 0" class="list-stack q-mt-lg">
+                  <article
+                    v-for="lot in openInventoryLots"
+                    :key="lot.id"
+                    class="list-card"
+                  >
+                    <div class="detail-row">
+                      <strong>{{ lot.material?.name ?? 'Material lot' }}</strong>
+                      <q-chip square color="amber-2" text-color="brown-10">
+                        {{ lot.lot_code }}
+                      </q-chip>
+                    </div>
+
+                    <div class="text-body2 text-grey-8 q-mt-sm">
+                      {{ formatQuantity(lot.quantity_remaining) }}
+                      {{ lot.material?.unit_of_measure ?? 'units' }} left at
+                      {{ formatMoney(lot.unit_cost) }} each
+                    </div>
+
+                    <div class="text-caption text-grey-7 q-mt-xs">
+                      {{ lot.supplier?.supplier_name ?? 'Unknown supplier' }} /
+                      received {{ formatDate(lot.received_at) }}
+                    </div>
+                  </article>
+                </div>
+
+                <div v-else class="empty-state q-mt-lg">
+                  No open material lots yet. Record a receipt to stock production.
+                </div>
+              </div>
+            </section>
+          </q-tab-panel>
+
+          <q-tab-panel name="purchase-entry" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Purchasing workflow</div>
+              <div class="section-title">Receive honey and packaging into lots</div>
+
+              <div class="text-body2 text-grey-8 q-mt-sm">
+                Post receipts with lot codes so production can consume real stock.
+              </div>
+
+              <q-banner
+                v-if="purchaseWritesDisabled"
+                rounded
+                class="bg-grey-2 text-grey-9 q-mt-lg"
               >
-                {{ item.material?.name ?? 'Material' }} /
-                {{ formatQuantity(item.quantity) }}
-                {{ item.material?.unit_of_measure ?? 'units' }}
-              </q-chip>
+                Live purchase writes need a connected Supabase project with the
+                latest migrations.
+              </q-banner>
+
+              <q-form class="q-mt-lg" @submit.prevent="submitPurchase">
+                <div class="inline-form-grid">
+                  <q-select
+                    v-model="purchaseForm.supplierId"
+                    outlined
+                    emit-value
+                    map-options
+                    :disable="
+                      purchaseWritesDisabled || supplierOptions.length === 0
+                    "
+                    :options="supplierOptions"
+                    label="Supplier"
+                  />
+
+                  <q-input
+                    v-model="purchaseForm.purchasedOn"
+                    outlined
+                    type="date"
+                    :disable="purchaseWritesDisabled"
+                    label="Purchase date"
+                  />
+
+                  <q-input
+                    v-model="purchaseForm.purchaseReference"
+                    outlined
+                    :disable="purchaseWritesDisabled"
+                    label="Reference"
+                    hint="Optional invoice or delivery note"
+                  />
+
+                  <q-input
+                    v-model="purchaseForm.notes"
+                    outlined
+                    type="textarea"
+                    autogrow
+                    :disable="purchaseWritesDisabled"
+                    label="Notes"
+                  />
+                </div>
+
+                <div class="operations-subheading q-mt-lg">Line items</div>
+
+                <div class="line-item-stack q-mt-sm">
+                  <article
+                    v-for="(item, index) in purchaseForm.items"
+                    :key="item.key"
+                    class="line-item-card"
+                  >
+                    <div class="detail-row">
+                      <strong>Line {{ index + 1 }}</strong>
+                      <q-btn
+                        v-if="purchaseForm.items.length > 1"
+                        flat
+                        round
+                        dense
+                        type="button"
+                        color="negative"
+                        icon="delete"
+                        :disable="purchaseWritesDisabled"
+                        @click="removePurchaseLine(item.key)"
+                      />
+                    </div>
+
+                    <div class="line-item-grid q-mt-md">
+                      <q-select
+                        v-model="item.materialId"
+                        outlined
+                        emit-value
+                        map-options
+                        :disable="
+                          purchaseWritesDisabled || materialOptions.length === 0
+                        "
+                        :options="materialOptions"
+                        label="Material"
+                      />
+
+                      <q-input
+                        v-model="item.quantity"
+                        outlined
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        :disable="purchaseWritesDisabled"
+                        label="Quantity"
+                      />
+
+                      <q-input
+                        v-model="item.unitCost"
+                        outlined
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        :disable="purchaseWritesDisabled"
+                        label="Unit cost (UGX)"
+                      />
+
+                      <q-input
+                        v-model="item.lotCode"
+                        outlined
+                        :disable="purchaseWritesDisabled"
+                        label="Lot code"
+                        hint="Optional, auto-generated when blank"
+                      />
+                    </div>
+                  </article>
+                </div>
+
+                <div class="form-footer">
+                  <div class="summary-pill-row">
+                    <q-btn
+                      flat
+                      color="secondary"
+                      no-caps
+                      icon="add"
+                      type="button"
+                      label="Add line"
+                      :disable="purchaseWritesDisabled"
+                      @click="addPurchaseLine"
+                    />
+
+                    <q-chip square color="amber-2" text-color="brown-10">
+                      Estimated receipt total: {{ formatMoney(purchaseTotal) }}
+                    </q-chip>
+                  </div>
+
+                  <q-btn
+                    color="primary"
+                    no-caps
+                    type="submit"
+                    label="Record purchase"
+                    :disable="purchaseWritesDisabled"
+                    :loading="isSubmittingPurchase"
+                  />
+                </div>
+              </q-form>
             </div>
-          </article>
-        </q-card-section>
+          </q-tab-panel>
 
-        <q-card-section v-else>
-          <div class="empty-state">
-            Purchases will appear here after the first honey or packaging
-            receipt is recorded.
-          </div>
-        </q-card-section>
-      </q-card>
+          <q-tab-panel name="batch-entry" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Production workflow</div>
+              <div class="section-title">Consume lots and create finished output</div>
 
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Recent production batches</div>
-          <div class="section-title">Traceable outputs with unit cost</div>
-        </q-card-section>
+              <div class="text-body2 text-grey-8 q-mt-sm">
+                Create a batch from open lots and keep cost per jar traceable.
+              </div>
 
-        <q-card-section v-if="workspace.batches.length > 0" class="list-stack">
-          <article
-            v-for="batch in workspace.batches"
-            :key="batch.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{ batch.batch_code }}</strong>
-              <q-chip square color="blue-1" text-color="blue-10">
-                {{ formatMoney(batch.output_unit_cost) }} / jar
-              </q-chip>
-            </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ batch.variant?.variant_name ?? 'Unknown variant' }} /
-              {{ batch.total_output_quantity }} jars /
-              {{ formatDate(batch.started_at) }}
-            </div>
-
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip
-                v-for="input in batch.inputs ?? []"
-                :key="input.id"
-                square
-                color="grey-2"
-                text-color="grey-9"
+              <q-banner
+                v-if="batchWritesDisabled"
+                rounded
+                class="bg-grey-2 text-grey-9 q-mt-lg"
               >
-                {{ input.material?.name ?? 'Material' }} /
-                {{ formatQuantity(input.quantity_consumed) }}
-                {{ input.material?.unit_of_measure ?? 'units' }}
-              </q-chip>
-            </div>
-          </article>
-        </q-card-section>
+                Production entry unlocks after live material lots exist. Record
+                at least one purchase receipt first.
+              </q-banner>
 
-        <q-card-section v-else>
-          <div class="empty-state">
-            Production history starts once a batch consumes real lots. The
-            resulting output cost then becomes the baseline for warehouse and
-            retail phases.
-          </div>
-        </q-card-section>
+              <q-form class="q-mt-lg" @submit.prevent="submitProductionBatch">
+                <div class="inline-form-grid">
+                  <q-select
+                    v-model="batchForm.variantId"
+                    outlined
+                    emit-value
+                    map-options
+                    :disable="batchWritesDisabled || variantOptions.length === 0"
+                    :options="variantOptions"
+                    label="Finished variant"
+                  />
+
+                  <q-input
+                    v-model="batchForm.startedOn"
+                    outlined
+                    type="date"
+                    :disable="batchWritesDisabled"
+                    label="Batch date"
+                  />
+
+                  <q-input
+                    v-model="batchForm.batchCode"
+                    outlined
+                    :disable="batchWritesDisabled"
+                    label="Batch code"
+                    hint="Auto-suggested and incremented by date"
+                  />
+
+                  <q-input
+                    v-model="batchForm.outputQuantity"
+                    outlined
+                    type="number"
+                    min="1"
+                    step="1"
+                    :disable="batchWritesDisabled"
+                    label="Jars produced"
+                  />
+
+                  <q-input
+                    v-model="batchForm.notes"
+                    outlined
+                    type="textarea"
+                    autogrow
+                    :disable="batchWritesDisabled"
+                    label="Batch notes"
+                  />
+                </div>
+
+                <div class="operations-subheading q-mt-lg">Consumed inputs</div>
+
+                <div class="line-item-stack q-mt-sm">
+                  <article
+                    v-for="(input, index) in batchForm.inputs"
+                    :key="input.key"
+                    class="line-item-card"
+                  >
+                    <div class="detail-row">
+                      <strong>Input {{ index + 1 }}</strong>
+                      <q-btn
+                        v-if="batchForm.inputs.length > 1"
+                        flat
+                        round
+                        dense
+                        type="button"
+                        color="negative"
+                        icon="delete"
+                        :disable="batchWritesDisabled"
+                        @click="removeBatchInput(input.key)"
+                      />
+                    </div>
+
+                    <div class="line-item-grid q-mt-md">
+                      <q-select
+                        v-model="input.inventoryLotId"
+                        outlined
+                        emit-value
+                        map-options
+                        :disable="
+                          batchWritesDisabled || inventoryLotOptions.length === 0
+                        "
+                        :options="inventoryLotOptions"
+                        label="Material lot"
+                      />
+
+                      <q-input
+                        v-model="input.quantity"
+                        outlined
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        :disable="batchWritesDisabled"
+                        label="Quantity consumed"
+                      />
+                    </div>
+
+                    <div
+                      v-if="resolveInventoryLot(input.inventoryLotId)"
+                      class="text-caption text-grey-7 q-mt-sm"
+                    >
+                      {{
+                        resolveInventoryLot(input.inventoryLotId).material?.name ??
+                        'Material'
+                      }}
+                      /
+                      {{
+                        formatQuantity(
+                          resolveInventoryLot(input.inventoryLotId)
+                            .quantity_remaining
+                        )
+                      }}
+                      {{
+                        resolveInventoryLot(input.inventoryLotId).material
+                          ?.unit_of_measure ?? 'units'
+                      }}
+                      open at
+                      {{
+                        formatMoney(
+                          resolveInventoryLot(input.inventoryLotId).unit_cost
+                        )
+                      }}
+                    </div>
+                  </article>
+                </div>
+
+                <div class="form-footer">
+                  <div class="summary-pill-row">
+                    <q-btn
+                      flat
+                      color="secondary"
+                      no-caps
+                      icon="add"
+                      type="button"
+                      label="Add input"
+                      :disable="batchWritesDisabled"
+                      @click="addBatchInput"
+                    />
+
+                    <q-chip square color="green-1" text-color="green-10">
+                      Input cost: {{ formatMoney(estimatedBatchInputCost) }}
+                    </q-chip>
+
+                    <q-chip square color="blue-1" text-color="blue-10">
+                      Cost per jar: {{ formatMoney(estimatedBatchUnitCost) }}
+                    </q-chip>
+                  </div>
+
+                  <q-btn
+                    color="primary"
+                    no-caps
+                    type="submit"
+                    label="Create production batch"
+                    :disable="batchWritesDisabled"
+                    :loading="isSubmittingBatch"
+                  />
+                </div>
+              </q-form>
+            </div>
+          </q-tab-panel>
+
+          <q-tab-panel name="purchases" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Recent purchases</div>
+              <div class="section-title">Material receipts now recorded</div>
+
+              <div
+                v-if="workspace.purchases.length > 0"
+                class="list-stack q-mt-lg"
+              >
+                <article
+                  v-for="purchase in workspace.purchases"
+                  :key="purchase.id"
+                  class="list-card"
+                >
+                  <div class="detail-row">
+                    <strong>{{ purchaseLabel(purchase) }}</strong>
+                    <q-chip square color="amber-2" text-color="brown-10">
+                      {{ formatMoney(purchase.total_amount) }}
+                    </q-chip>
+                  </div>
+
+                  <div class="text-body2 text-grey-8 q-mt-sm">
+                    {{ purchase.supplier?.supplier_name ?? 'Unknown supplier' }} /
+                    {{ formatDate(purchase.purchased_at) }}
+                  </div>
+
+                  <div class="summary-pill-row q-mt-sm">
+                    <q-chip
+                      v-for="item in purchase.items ?? []"
+                      :key="item.id"
+                      square
+                      color="grey-2"
+                      text-color="grey-9"
+                    >
+                      {{ item.material?.name ?? 'Material' }} /
+                      {{ formatQuantity(item.quantity) }}
+                      {{ item.material?.unit_of_measure ?? 'units' }}
+                    </q-chip>
+                  </div>
+                </article>
+              </div>
+
+              <div v-else class="empty-state q-mt-lg">
+                Purchases appear here after the first receipt is recorded.
+              </div>
+            </div>
+          </q-tab-panel>
+
+          <q-tab-panel name="batches" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Recent production batches</div>
+              <div class="section-title">Traceable outputs with unit cost</div>
+
+              <div v-if="workspace.batches.length > 0" class="list-stack q-mt-lg">
+                <article
+                  v-for="batch in workspace.batches"
+                  :key="batch.id"
+                  class="list-card"
+                >
+                  <div class="detail-row">
+                    <strong>{{ batch.batch_code }}</strong>
+                    <q-chip square color="blue-1" text-color="blue-10">
+                      {{ formatMoney(batch.output_unit_cost) }} / jar
+                    </q-chip>
+                  </div>
+
+                  <div class="text-body2 text-grey-8 q-mt-sm">
+                    {{ batch.variant?.variant_name ?? 'Unknown variant' }} /
+                    {{ batch.total_output_quantity }} jars /
+                    {{ formatDate(batch.started_at) }}
+                  </div>
+
+                  <div class="summary-pill-row q-mt-sm">
+                    <q-chip
+                      v-for="input in batch.inputs ?? []"
+                      :key="input.id"
+                      square
+                      color="grey-2"
+                      text-color="grey-9"
+                    >
+                      {{ input.material?.name ?? 'Material' }} /
+                      {{ formatQuantity(input.quantity_consumed) }}
+                      {{ input.material?.unit_of_measure ?? 'units' }}
+                    </q-chip>
+                  </div>
+                </article>
+              </div>
+
+              <div v-else class="empty-state q-mt-lg">
+                Batch history starts once a production run consumes real lots.
+              </div>
+            </div>
+          </q-tab-panel>
+        </q-tab-panels>
       </q-card>
     </section>
   </q-page>
@@ -694,6 +732,7 @@ function getBatchDateString(value) {
 
 const $q = useQuasar()
 const workspace = ref(getPreviewOperationsWorkspace())
+const activeWorkspaceTab = ref('snapshot')
 const isLoading = ref(false)
 const isSubmittingPurchase = ref(false)
 const isSubmittingBatch = ref(false)
@@ -773,21 +812,21 @@ const actionFeedbackClass = computed(() => {
 const metrics = computed(() => [
   {
     label: 'Catalogue',
-    title: 'Variants ready for production',
-    value: `${workspace.value.variants.length}`,
-    text: 'Active variants are ready for purchasing, costing, and batch output.'
+    title: 'Active variants',
+    value: `${workspace.value.variants.length} ready`,
+    text: 'Ready for purchasing and batch output.'
   },
   {
     label: 'Supply',
-    title: 'Materials and suppliers in play',
-    value: `${workspace.value.materials.length} materials / ${workspace.value.suppliers.length} suppliers`,
-    text: 'Honey, packaging, and supplier masters are ready for entry.'
+    title: 'Materials / suppliers',
+    value: `${workspace.value.materials.length} / ${workspace.value.suppliers.length}`,
+    text: 'Stock sources ready for entry.'
   },
   {
     label: 'Transactions',
-    title: 'Purchases and batches recorded',
-    value: `${workspace.value.purchases.length} purchases / ${workspace.value.batches.length} batches`,
-    text: 'Receipts create lots, and lots feed completed batches.'
+    title: 'Receipts / batches',
+    value: `${workspace.value.purchases.length} / ${workspace.value.batches.length}`,
+    text: 'Recorded in this workspace.'
   }
 ])
 

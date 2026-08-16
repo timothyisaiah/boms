@@ -1,5 +1,5 @@
 <template>
-  <q-page class="page-layout">
+  <q-page class="page-layout operations-page">
     <section class="page-hero">
       <div>
         <p class="page-hero__eyebrow">Finance</p>
@@ -46,7 +46,7 @@
       {{ loadError }}
     </q-banner>
 
-    <section class="card-grid card-grid--two">
+    <section class="card-grid card-grid--two operations-page__metrics">
       <q-card
         v-for="metric in metrics"
         :key="metric.title"
@@ -62,747 +62,804 @@
       </q-card>
     </section>
 
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Reconciliation workflow</div>
-          <div class="section-title"
-            >Explain what happened to retailer stock</div
-          >
+    <section>
+      <q-card flat class="surface-card operations-workspace-shell">
+        <q-card-section class="operations-workspace-shell__header">
+          <div>
+            <div class="section-label">Workspace</div>
+            <div class="section-title">Forms and records</div>
+          </div>
+
+          <div class="summary-pill-row">
+            <q-chip square color="amber-2" text-color="brown-10">
+              {{ retailersWithOutstanding }} collections pending
+            </q-chip>
+            <q-chip
+              square
+              :color="workspace.mode === 'live' ? 'green-1' : 'brown-2'"
+              :text-color="workspace.mode === 'live' ? 'green-10' : 'brown-10'"
+            >
+              {{ workspace.mode === 'live' ? 'Live mode' : 'Preview mode' }}
+            </q-chip>
+          </div>
         </q-card-section>
 
-        <q-card-section>
-          <q-banner
-            v-if="reconciliationWritesDisabled"
-            rounded
-            class="bg-grey-2 text-grey-9 q-mb-md"
-          >
-            {{ reconciliationWriteMessage }}
-          </q-banner>
+        <q-tabs
+          v-model="activeWorkspaceTab"
+          align="left"
+          inline-label
+          outside-arrows
+          mobile-arrows
+          indicator-color="primary"
+          active-color="brown-10"
+          class="operations-tabs"
+        >
+          <q-tab name="snapshot" icon="insights" label="Snapshot" />
+          <q-tab
+            name="reconciliation-entry"
+            icon="fact_check"
+            label="Reconciliation"
+          />
+          <q-tab
+            name="remittance-entry"
+            icon="payments"
+            label="Remittance"
+          />
+          <q-tab name="expense-entry" icon="receipt_long" label="Expense" />
+          <q-tab
+            name="records"
+            icon="history"
+            :label="`Records (${workspace.reconciliations.length + workspace.remittances.length + workspace.expenses.length})`"
+          />
+        </q-tabs>
 
-          <q-form @submit.prevent="submitReconciliation">
-            <div class="inline-form-grid">
-              <q-select
-                v-model="reconciliationForm.retailerId"
-                outlined
-                emit-value
-                map-options
-                :disable="
-                  reconciliationWritesDisabled ||
-                  reconciliationRetailerOptions.length === 0
-                "
-                :options="reconciliationRetailerOptions"
-                label="Retail partner"
-              />
+        <q-separator />
 
-              <q-input
-                v-model="reconciliationForm.reconciledOn"
-                outlined
-                type="date"
-                :disable="reconciliationWritesDisabled"
-                label="Reconciliation date"
-              />
-
-              <q-input
-                v-model="reconciliationForm.reconciliationReference"
-                outlined
-                :disable="reconciliationWritesDisabled"
-                label="Reconciliation reference"
-                hint="Optional visit, count, or van-sheet code"
-              />
-
-              <q-input
-                v-model="reconciliationForm.notes"
-                outlined
-                type="textarea"
-                autogrow
-                :disable="reconciliationWritesDisabled"
-                label="Notes"
-              />
-            </div>
-
-            <div class="operations-subheading q-mt-lg">Counted lines</div>
-
-            <div class="line-item-stack q-mt-sm">
-              <article
-                v-for="(item, index) in reconciliationForm.items"
-                :key="item.key"
-                class="line-item-card"
-              >
-                <div class="detail-row">
-                  <strong>Line {{ index + 1 }}</strong>
-                  <q-btn
-                    v-if="reconciliationForm.items.length > 1"
-                    flat
-                    round
-                    dense
-                    type="button"
-                    color="negative"
-                    icon="delete"
-                    :disable="reconciliationWritesDisabled"
-                    @click="removeReconciliationLine(item.key)"
-                  />
+        <q-tab-panels
+          v-model="activeWorkspaceTab"
+          animated
+          class="bg-transparent operations-tab-panels"
+        >
+          <q-tab-panel name="snapshot" class="operations-tab-panel">
+            <section class="card-grid card-grid--two">
+              <div class="operations-tab-block">
+                <div class="section-label">Outstanding view</div>
+                <div class="section-title">
+                  Retailer balances and follow-up status
                 </div>
 
-                <div class="line-item-grid line-item-grid--two q-mt-md">
+                <div
+                  v-if="workspace.retailerBalances.length > 0"
+                  class="list-stack q-mt-lg"
+                >
+                  <article
+                    v-for="balance in workspace.retailerBalances"
+                    :key="balance.retailer_id"
+                    class="list-card"
+                  >
+                    <div class="detail-row">
+                      <strong>{{ balance.retailer_name }}</strong>
+                      <q-chip
+                        square
+                        :color="getRetailerBalanceState(balance).color"
+                        :text-color="getRetailerBalanceState(balance).textColor"
+                      >
+                        {{ getRetailerBalanceState(balance).label }}
+                      </q-chip>
+                    </div>
+
+                    <div class="text-body2 text-grey-8 q-mt-sm">
+                      {{ balance.delivery_location || 'Delivery location pending' }}
+                    </div>
+
+                    <div class="summary-pill-row q-mt-sm">
+                      <q-chip square color="grey-2" text-color="grey-9">
+                        Sold: {{ formatQuantity(balance.sold_quantity) }}
+                      </q-chip>
+                      <q-chip square color="grey-2" text-color="grey-9">
+                        Returned: {{ formatQuantity(balance.returned_quantity) }}
+                      </q-chip>
+                      <q-chip square color="grey-2" text-color="grey-9">
+                        Damaged: {{ formatQuantity(balance.damaged_quantity) }}
+                      </q-chip>
+                      <q-chip square color="grey-2" text-color="grey-9">
+                        Remaining: {{ formatQuantity(balance.remaining_quantity) }}
+                      </q-chip>
+                    </div>
+
+                    <div class="detail-row q-mt-sm">
+                      <span>Recognized sales</span>
+                      <strong>{{
+                        formatMoney(balance.recognized_sales_value)
+                      }}</strong>
+                    </div>
+
+                    <div class="detail-row q-mt-xs">
+                      <span>Remitted</span>
+                      <span>{{ formatMoney(balance.remitted_amount) }}</span>
+                    </div>
+
+                    <div class="detail-row q-mt-xs">
+                      <span>Outstanding</span>
+                      <span>{{ formatMoney(balance.outstanding_amount) }}</span>
+                    </div>
+
+                    <div class="text-caption text-grey-7 q-mt-sm">
+                      Last reconciled {{ formatDate(balance.last_reconciled_at) }}
+                      / Last remitted {{ formatDate(balance.last_remitted_at) }}
+                    </div>
+                  </article>
+                </div>
+
+                <div v-else class="empty-state q-mt-lg">
+                  Retailer balances will appear here after the first
+                  reconciliation or remittance is recorded.
+                </div>
+              </div>
+
+              <div class="operations-tab-block">
+                <div class="section-label">Gross profit view</div>
+                <div class="section-title">How the current picture is built</div>
+
+                <div class="detail-list q-mt-lg">
+                  <div class="detail-row">
+                    <span>Issued to retailers</span>
+                    <strong>{{ formatQuantity(profitSummary.issued_quantity) }} jars</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Sold through reconciliation</span>
+                    <strong>{{ formatQuantity(profitSummary.sold_quantity) }} jars</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Returned to warehouse</span>
+                    <strong>{{ formatQuantity(profitSummary.returned_quantity) }} jars</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Damaged at retailer</span>
+                    <strong>{{ formatQuantity(profitSummary.damaged_quantity) }} jars</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Still at retailers</span>
+                    <strong>{{ formatQuantity(profitSummary.remaining_quantity) }} jars</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Recognized sales</span>
+                    <strong>{{
+                      formatMoney(profitSummary.recognized_sales_value)
+                    }}</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Cost of goods sold</span>
+                    <strong>{{
+                      formatMoney(profitSummary.cost_of_goods_sold)
+                    }}</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Gross profit</span>
+                    <strong>{{ formatMoney(profitSummary.gross_profit) }}</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Operating expenses</span>
+                    <strong>{{
+                      formatMoney(profitSummary.operating_expenses)
+                    }}</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Net result</span>
+                    <q-chip
+                      square
+                      :color="profitSummary.net_profit >= 0 ? 'green-1' : 'red-1'"
+                      :text-color="
+                        profitSummary.net_profit >= 0 ? 'green-10' : 'red-10'
+                      "
+                    >
+                      {{ formatMoney(profitSummary.net_profit) }}
+                    </q-chip>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Remitted so far</span>
+                    <strong>{{ formatMoney(profitSummary.remitted_amount) }}</strong>
+                  </div>
+
+                  <div class="detail-row">
+                    <span>Outstanding from retailers</span>
+                    <strong>{{
+                      formatMoney(profitSummary.outstanding_amount)
+                    }}</strong>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </q-tab-panel>
+
+          <q-tab-panel
+            name="reconciliation-entry"
+            class="operations-tab-panel"
+          >
+            <div class="operations-tab-block">
+              <div class="section-label">Reconciliation workflow</div>
+              <div class="section-title">Explain what happened to retailer stock</div>
+
+              <div class="text-body2 text-grey-8 q-mt-sm">
+                Count sold, returned, damaged, and remaining jars against each
+                open retailer line.
+              </div>
+
+              <q-banner
+                v-if="reconciliationWritesDisabled"
+                rounded
+                class="bg-grey-2 text-grey-9 q-mt-lg"
+              >
+                {{ reconciliationWriteMessage }}
+              </q-banner>
+
+              <q-form class="q-mt-lg" @submit.prevent="submitReconciliation">
+                <div class="inline-form-grid">
                   <q-select
-                    v-model="item.stockIssueItemId"
+                    v-model="reconciliationForm.retailerId"
                     outlined
                     emit-value
                     map-options
                     :disable="
                       reconciliationWritesDisabled ||
-                      reconciliationOpenLineOptions.length === 0
+                      reconciliationRetailerOptions.length === 0
                     "
-                    :options="reconciliationOpenLineOptions"
-                    label="Issued stock line"
-                    @update:model-value="applyOpenIssueDefaults(item)"
+                    :options="reconciliationRetailerOptions"
+                    label="Retail partner"
                   />
 
                   <q-input
-                    v-model="item.unitPrice"
+                    v-model="reconciliationForm.reconciledOn"
+                    outlined
+                    type="date"
+                    :disable="reconciliationWritesDisabled"
+                    label="Reconciliation date"
+                  />
+
+                  <q-input
+                    v-model="reconciliationForm.reconciliationReference"
+                    outlined
+                    :disable="reconciliationWritesDisabled"
+                    label="Reconciliation reference"
+                    hint="Optional visit, count, or van-sheet code"
+                  />
+
+                  <q-input
+                    v-model="reconciliationForm.notes"
+                    outlined
+                    type="textarea"
+                    autogrow
+                    :disable="reconciliationWritesDisabled"
+                    label="Notes"
+                  />
+                </div>
+
+                <div class="operations-subheading q-mt-lg">Counted lines</div>
+
+                <div class="line-item-stack q-mt-sm">
+                  <article
+                    v-for="(item, index) in reconciliationForm.items"
+                    :key="item.key"
+                    class="line-item-card"
+                  >
+                    <div class="detail-row">
+                      <strong>Line {{ index + 1 }}</strong>
+                      <q-btn
+                        v-if="reconciliationForm.items.length > 1"
+                        flat
+                        round
+                        dense
+                        type="button"
+                        color="negative"
+                        icon="delete"
+                        :disable="reconciliationWritesDisabled"
+                        @click="removeReconciliationLine(item.key)"
+                      />
+                    </div>
+
+                    <div class="line-item-grid line-item-grid--two q-mt-md">
+                      <q-select
+                        v-model="item.stockIssueItemId"
+                        outlined
+                        emit-value
+                        map-options
+                        :disable="
+                          reconciliationWritesDisabled ||
+                          reconciliationOpenLineOptions.length === 0
+                        "
+                        :options="reconciliationOpenLineOptions"
+                        label="Issued stock line"
+                        @update:model-value="applyOpenIssueDefaults(item)"
+                      />
+
+                      <q-input
+                        v-model="item.unitPrice"
+                        outlined
+                        type="number"
+                        min="0"
+                        step="100"
+                        :disable="reconciliationWritesDisabled"
+                        label="Selling price per jar"
+                      />
+                    </div>
+
+                    <div class="line-item-grid q-mt-md">
+                      <q-input
+                        v-model="item.quantitySold"
+                        outlined
+                        type="number"
+                        min="0"
+                        step="1"
+                        :disable="reconciliationWritesDisabled"
+                        label="Sold"
+                      />
+
+                      <q-input
+                        v-model="item.quantityReturned"
+                        outlined
+                        type="number"
+                        min="0"
+                        step="1"
+                        :disable="reconciliationWritesDisabled"
+                        label="Returned"
+                      />
+
+                      <q-input
+                        v-model="item.quantityDamaged"
+                        outlined
+                        type="number"
+                        min="0"
+                        step="1"
+                        :disable="reconciliationWritesDisabled"
+                        label="Damaged"
+                      />
+
+                      <q-input
+                        v-model="item.quantityRemaining"
+                        outlined
+                        type="number"
+                        min="0"
+                        step="1"
+                        :disable="reconciliationWritesDisabled"
+                        label="Remaining"
+                      />
+                    </div>
+
+                    <div
+                      v-if="resolveOpenIssueLine(item.stockIssueItemId)"
+                      class="text-caption text-grey-7 q-mt-sm"
+                    >
+                      {{
+                        resolveOpenIssueLine(item.stockIssueItemId).sku ?? 'Variant'
+                      }}
+                      /
+                      {{
+                        resolveOpenIssueLine(item.stockIssueItemId).batch_code ??
+                        'Batch'
+                      }}
+                      /
+                      {{
+                        formatQuantity(
+                          resolveOpenIssueLine(item.stockIssueItemId)
+                            .quantity_open
+                        )
+                      }}
+                      jars open at
+                      {{
+                        formatMoney(
+                          resolveOpenIssueLine(item.stockIssueItemId).unit_cost
+                        )
+                      }}
+                      cost per jar
+                    </div>
+                  </article>
+                </div>
+
+                <div class="form-footer">
+                  <div class="summary-pill-row">
+                    <q-btn
+                      flat
+                      color="secondary"
+                      no-caps
+                      icon="add"
+                      type="button"
+                      label="Add line"
+                      :disable="reconciliationWritesDisabled"
+                      @click="addReconciliationLine"
+                    />
+
+                    <q-chip square color="blue-1" text-color="blue-10">
+                      Sales value:
+                      {{ formatMoney(estimatedReconciliationSalesValue) }}
+                    </q-chip>
+
+                    <q-chip square color="amber-2" text-color="brown-10">
+                      COGS:
+                      {{ formatMoney(estimatedReconciliationCogsValue) }}
+                    </q-chip>
+
+                    <q-chip square color="green-1" text-color="green-10">
+                      Remaining counted:
+                      {{ formatQuantity(estimatedRemainingQuantity) }} jars
+                    </q-chip>
+                  </div>
+
+                  <q-btn
+                    color="primary"
+                    no-caps
+                    type="submit"
+                    label="Record reconciliation"
+                    :disable="reconciliationWritesDisabled"
+                    :loading="isSubmittingReconciliation"
+                  />
+                </div>
+              </q-form>
+            </div>
+          </q-tab-panel>
+
+          <q-tab-panel name="remittance-entry" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Remittance workflow</div>
+              <div class="section-title">Record cash received from retailers</div>
+
+              <div class="text-body2 text-grey-8 q-mt-sm">
+                Post receipts separately from stock recognition so collections
+                stay auditable.
+              </div>
+
+              <q-banner
+                v-if="remittanceWritesDisabled"
+                rounded
+                class="bg-grey-2 text-grey-9 q-mt-lg"
+              >
+                {{ remittanceWriteMessage }}
+              </q-banner>
+
+              <q-form class="q-mt-lg" @submit.prevent="submitRemittance">
+                <div class="inline-form-grid">
+                  <q-select
+                    v-model="remittanceForm.retailerId"
+                    outlined
+                    emit-value
+                    map-options
+                    :disable="
+                      remittanceWritesDisabled ||
+                      remittanceRetailerOptions.length === 0
+                    "
+                    :options="remittanceRetailerOptions"
+                    label="Retail partner"
+                  />
+
+                  <q-select
+                    v-model="remittanceForm.reconciliationId"
+                    outlined
+                    clearable
+                    emit-value
+                    map-options
+                    :disable="remittanceWritesDisabled"
+                    :options="remittanceReconciliationOptions"
+                    label="Linked reconciliation"
+                    hint="Optional, for partial or period-specific settlement"
+                  />
+
+                  <q-input
+                    v-model="remittanceForm.receivedOn"
+                    outlined
+                    type="date"
+                    :disable="remittanceWritesDisabled"
+                    label="Received date"
+                  />
+
+                  <q-input
+                    v-model="remittanceForm.amount"
                     outlined
                     type="number"
                     min="0"
                     step="100"
-                    :disable="reconciliationWritesDisabled"
-                    label="Selling price per jar"
+                    :disable="remittanceWritesDisabled"
+                    label="Amount remitted"
+                  />
+
+                  <q-input
+                    v-model="remittanceForm.remittanceReference"
+                    outlined
+                    :disable="remittanceWritesDisabled"
+                    label="Payment reference"
+                    hint="Optional transfer or receipt code"
+                  />
+
+                  <q-input
+                    v-model="remittanceForm.notes"
+                    outlined
+                    type="textarea"
+                    autogrow
+                    :disable="remittanceWritesDisabled"
+                    label="Notes"
                   />
                 </div>
 
-                <div class="line-item-grid q-mt-md">
-                  <q-input
-                    v-model="item.quantitySold"
-                    outlined
-                    type="number"
-                    min="0"
-                    step="1"
-                    :disable="reconciliationWritesDisabled"
-                    label="Sold"
-                  />
-
-                  <q-input
-                    v-model="item.quantityReturned"
-                    outlined
-                    type="number"
-                    min="0"
-                    step="1"
-                    :disable="reconciliationWritesDisabled"
-                    label="Returned"
-                  />
-
-                  <q-input
-                    v-model="item.quantityDamaged"
-                    outlined
-                    type="number"
-                    min="0"
-                    step="1"
-                    :disable="reconciliationWritesDisabled"
-                    label="Damaged"
-                  />
-
-                  <q-input
-                    v-model="item.quantityRemaining"
-                    outlined
-                    type="number"
-                    min="0"
-                    step="1"
-                    :disable="reconciliationWritesDisabled"
-                    label="Remaining"
-                  />
+                <div class="summary-pill-row q-mt-md">
+                  <q-chip square color="amber-2" text-color="brown-10">
+                    Current outstanding:
+                    {{ formatMoney(selectedRetailerOutstandingAmount) }}
+                  </q-chip>
                 </div>
 
-                <div
-                  v-if="resolveOpenIssueLine(item.stockIssueItemId)"
-                  class="text-caption text-grey-7 q-mt-sm"
-                >
-                  {{
-                    resolveOpenIssueLine(item.stockIssueItemId).sku ?? 'Variant'
-                  }}
-                  /
-                  {{
-                    resolveOpenIssueLine(item.stockIssueItemId).batch_code ??
-                    'Batch'
-                  }}
-                  /
-                  {{
-                    formatQuantity(
-                      resolveOpenIssueLine(item.stockIssueItemId).quantity_open
-                    )
-                  }}
-                  jars open at
-                  {{
-                    formatMoney(
-                      resolveOpenIssueLine(item.stockIssueItemId).unit_cost
-                    )
-                  }}
-                  cost per jar
+                <div class="form-footer">
+                  <span class="text-caption text-grey-7">
+                    Remittances stay separate from stock recognition so partial
+                    collections remain auditable.
+                  </span>
+
+                  <q-btn
+                    color="primary"
+                    no-caps
+                    type="submit"
+                    label="Record remittance"
+                    :disable="remittanceWritesDisabled"
+                    :loading="isSubmittingRemittance"
+                  />
                 </div>
-              </article>
+              </q-form>
             </div>
+          </q-tab-panel>
 
-            <div class="form-footer">
-              <div class="summary-pill-row">
-                <q-btn
-                  flat
-                  color="secondary"
-                  no-caps
-                  icon="add"
-                  type="button"
-                  label="Add line"
-                  :disable="reconciliationWritesDisabled"
-                  @click="addReconciliationLine"
-                />
+          <q-tab-panel name="expense-entry" class="operations-tab-panel">
+            <div class="operations-tab-block">
+              <div class="section-label">Expense workflow</div>
+              <div class="section-title">Capture operating costs against profit</div>
 
-                <q-chip square color="blue-1" text-color="blue-10">
-                  Sales value:
-                  {{ formatMoney(estimatedReconciliationSalesValue) }}
-                </q-chip>
-
-                <q-chip square color="amber-2" text-color="brown-10">
-                  COGS:
-                  {{ formatMoney(estimatedReconciliationCogsValue) }}
-                </q-chip>
-
-                <q-chip square color="green-1" text-color="green-10">
-                  Remaining counted:
-                  {{ formatQuantity(estimatedRemainingQuantity) }} jars
-                </q-chip>
+              <div class="text-body2 text-grey-8 q-mt-sm">
+                Keep expense posting separate from inventory truth while margin
+                stays visible.
               </div>
 
-              <q-btn
-                color="primary"
-                no-caps
-                type="submit"
-                label="Record reconciliation"
-                :disable="reconciliationWritesDisabled"
-                :loading="isSubmittingReconciliation"
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Outstanding view</div>
-          <div class="section-title"
-            >Retailer balances and follow-up status</div
-          >
-        </q-card-section>
-
-        <q-card-section
-          v-if="workspace.retailerBalances.length > 0"
-          class="list-stack"
-        >
-          <article
-            v-for="balance in workspace.retailerBalances"
-            :key="balance.retailer_id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{ balance.retailer_name }}</strong>
-              <q-chip
-                square
-                :color="getRetailerBalanceState(balance).color"
-                :text-color="getRetailerBalanceState(balance).textColor"
+              <q-banner
+                v-if="expenseWritesDisabled"
+                rounded
+                class="bg-grey-2 text-grey-9 q-mt-lg"
               >
-                {{ getRetailerBalanceState(balance).label }}
-              </q-chip>
+                {{ expenseWriteMessage }}
+              </q-banner>
+
+              <q-form class="q-mt-lg" @submit.prevent="submitExpense">
+                <div class="inline-form-grid">
+                  <q-input
+                    v-model="expenseForm.expenseCategory"
+                    outlined
+                    :disable="expenseWritesDisabled"
+                    label="Expense category"
+                  />
+
+                  <q-input
+                    v-model="expenseForm.incurredOn"
+                    outlined
+                    type="date"
+                    :disable="expenseWritesDisabled"
+                    label="Expense date"
+                  />
+
+                  <q-input
+                    v-model="expenseForm.amount"
+                    outlined
+                    type="number"
+                    min="0"
+                    step="100"
+                    :disable="expenseWritesDisabled"
+                    label="Expense amount"
+                  />
+
+                  <q-input
+                    v-model="expenseForm.vendorName"
+                    outlined
+                    :disable="expenseWritesDisabled"
+                    label="Vendor or payee"
+                  />
+
+                  <q-input
+                    v-model="expenseForm.expenseReference"
+                    outlined
+                    :disable="expenseWritesDisabled"
+                    label="Reference"
+                    hint="Optional invoice, fuel, or voucher number"
+                  />
+
+                  <q-input
+                    v-model="expenseForm.notes"
+                    outlined
+                    type="textarea"
+                    autogrow
+                    :disable="expenseWritesDisabled"
+                    label="Notes"
+                  />
+                </div>
+
+                <div class="form-footer">
+                  <span class="text-caption text-grey-7">
+                    Operating expenses reduce the gross margin view without
+                    changing inventory truth.
+                  </span>
+
+                  <q-btn
+                    color="primary"
+                    no-caps
+                    type="submit"
+                    label="Record expense"
+                    :disable="expenseWritesDisabled"
+                    :loading="isSubmittingExpense"
+                  />
+                </div>
+              </q-form>
             </div>
+          </q-tab-panel>
 
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ balance.delivery_location || 'Delivery location pending' }}
-            </div>
+          <q-tab-panel name="records" class="operations-tab-panel">
+            <section class="card-grid card-grid--two">
+              <div class="operations-tab-block">
+                <div class="section-label">Reconciliation history</div>
+                <div class="section-title">Recent stock settlement snapshots</div>
 
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip square color="grey-2" text-color="grey-9">
-                Sold: {{ formatQuantity(balance.sold_quantity) }}
-              </q-chip>
-              <q-chip square color="grey-2" text-color="grey-9">
-                Returned: {{ formatQuantity(balance.returned_quantity) }}
-              </q-chip>
-              <q-chip square color="grey-2" text-color="grey-9">
-                Damaged: {{ formatQuantity(balance.damaged_quantity) }}
-              </q-chip>
-              <q-chip square color="grey-2" text-color="grey-9">
-                Remaining: {{ formatQuantity(balance.remaining_quantity) }}
-              </q-chip>
-            </div>
+                <div
+                  v-if="workspace.reconciliations.length > 0"
+                  class="list-stack q-mt-lg"
+                >
+                  <article
+                    v-for="reconciliation in workspace.reconciliations"
+                    :key="reconciliation.id"
+                    class="list-card"
+                  >
+                    <div class="detail-row">
+                      <strong>{{ reconciliationLabel(reconciliation) }}</strong>
+                      <q-chip square color="amber-2" text-color="brown-10">
+                        {{ formatMoney(reconciliation.total_sales_value) }}
+                      </q-chip>
+                    </div>
 
-            <div class="detail-row q-mt-sm">
-              <span>Recognized sales</span>
-              <strong>{{ formatMoney(balance.recognized_sales_value) }}</strong>
-            </div>
+                    <div class="text-body2 text-grey-8 q-mt-sm">
+                      {{ reconciliation.retailer?.retailer_name ?? 'Retailer' }} /
+                      {{ formatDateTime(reconciliation.reconciled_at) }}
+                    </div>
 
-            <div class="detail-row q-mt-xs">
-              <span>Remitted</span>
-              <span>{{ formatMoney(balance.remitted_amount) }}</span>
-            </div>
+                    <div class="summary-pill-row q-mt-sm">
+                      <q-chip square color="grey-2" text-color="grey-9">
+                        Sold {{ formatQuantity(reconciliation.total_sold_quantity) }}
+                      </q-chip>
+                      <q-chip square color="grey-2" text-color="grey-9">
+                        Returned
+                        {{ formatQuantity(reconciliation.total_returned_quantity) }}
+                      </q-chip>
+                      <q-chip square color="grey-2" text-color="grey-9">
+                        Damaged
+                        {{ formatQuantity(reconciliation.total_damaged_quantity) }}
+                      </q-chip>
+                      <q-chip square color="grey-2" text-color="grey-9">
+                        Remaining
+                        {{ formatQuantity(reconciliation.total_remaining_quantity) }}
+                      </q-chip>
+                    </div>
 
-            <div class="detail-row q-mt-xs">
-              <span>Outstanding</span>
-              <span>{{ formatMoney(balance.outstanding_amount) }}</span>
-            </div>
+                    <div class="summary-pill-row q-mt-sm">
+                      <q-chip
+                        v-for="item in reconciliation.items ?? []"
+                        :key="item.id"
+                        square
+                        color="grey-2"
+                        text-color="grey-9"
+                      >
+                        {{ item.variant?.sku ?? 'Variant' }} /
+                        {{ item.batch?.batch_code ?? 'Batch' }} / sold
+                        {{ formatQuantity(item.quantity_sold) }} / left
+                        {{ formatQuantity(item.quantity_remaining) }}
+                      </q-chip>
+                    </div>
+                  </article>
+                </div>
 
-            <div class="text-caption text-grey-7 q-mt-sm">
-              Last reconciled {{ formatDate(balance.last_reconciled_at) }} /
-              Last remitted {{ formatDate(balance.last_remitted_at) }}
-            </div>
-          </article>
-        </q-card-section>
+                <div v-else class="empty-state q-mt-lg">
+                  Reconciliation history will appear here after retailer stock
+                  is counted and posted.
+                </div>
+              </div>
 
-        <q-card-section v-else>
-          <div class="empty-state">
-            Retailer balances will appear here after the first reconciliation or
-            remittance is recorded.
-          </div>
-        </q-card-section>
-      </q-card>
-    </section>
+              <div class="dashboard-section-stack">
+                <div class="operations-tab-block">
+                  <div class="section-label">Remittance history</div>
+                  <div class="section-title">Recent retailer cash receipts</div>
 
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Remittance workflow</div>
-          <div class="section-title">Record cash received from retailers</div>
-        </q-card-section>
+                  <div
+                    v-if="workspace.remittances.length > 0"
+                    class="list-stack q-mt-lg"
+                  >
+                    <article
+                      v-for="remittance in workspace.remittances"
+                      :key="remittance.id"
+                      class="list-card"
+                    >
+                      <div class="detail-row">
+                        <strong>{{
+                          remittance.retailer?.retailer_name ?? 'Retailer'
+                        }}</strong>
+                        <q-chip square color="green-1" text-color="green-10">
+                          {{ formatMoney(remittance.amount) }}
+                        </q-chip>
+                      </div>
 
-        <q-card-section>
-          <q-banner
-            v-if="remittanceWritesDisabled"
-            rounded
-            class="bg-grey-2 text-grey-9 q-mb-md"
-          >
-            {{ remittanceWriteMessage }}
-          </q-banner>
+                      <div class="text-body2 text-grey-8 q-mt-sm">
+                        {{ remittanceLabel(remittance) }}
+                      </div>
 
-          <q-form @submit.prevent="submitRemittance">
-            <div class="inline-form-grid">
-              <q-select
-                v-model="remittanceForm.retailerId"
-                outlined
-                emit-value
-                map-options
-                :disable="
-                  remittanceWritesDisabled ||
-                  remittanceRetailerOptions.length === 0
-                "
-                :options="remittanceRetailerOptions"
-                label="Retail partner"
-              />
+                      <div class="text-caption text-grey-7 q-mt-xs">
+                        {{ formatDateTime(remittance.received_at) }}
+                        <span
+                          v-if="
+                            remittance.reconciliation?.reconciliation_reference
+                          "
+                        >
+                          /
+                          {{ remittance.reconciliation.reconciliation_reference }}
+                        </span>
+                      </div>
+                    </article>
+                  </div>
 
-              <q-select
-                v-model="remittanceForm.reconciliationId"
-                outlined
-                clearable
-                emit-value
-                map-options
-                :disable="remittanceWritesDisabled"
-                :options="remittanceReconciliationOptions"
-                label="Linked reconciliation"
-                hint="Optional, for partial or period-specific settlement"
-              />
+                  <div v-else class="empty-state q-mt-lg">
+                    Remittance records will appear here after the first retailer
+                    payment is posted.
+                  </div>
+                </div>
 
-              <q-input
-                v-model="remittanceForm.receivedOn"
-                outlined
-                type="date"
-                :disable="remittanceWritesDisabled"
-                label="Received date"
-              />
+                <div class="operations-tab-block">
+                  <div class="section-label">Expense history</div>
+                  <div class="section-title">Recent operating expenses</div>
 
-              <q-input
-                v-model="remittanceForm.amount"
-                outlined
-                type="number"
-                min="0"
-                step="100"
-                :disable="remittanceWritesDisabled"
-                label="Amount remitted"
-              />
+                  <div
+                    v-if="workspace.expenses.length > 0"
+                    class="list-stack q-mt-lg"
+                  >
+                    <article
+                      v-for="expense in workspace.expenses"
+                      :key="expense.id"
+                      class="list-card"
+                    >
+                      <div class="detail-row">
+                        <strong>{{ expense.expense_category }}</strong>
+                        <q-chip square color="blue-1" text-color="blue-10">
+                          {{ formatMoney(expense.amount) }}
+                        </q-chip>
+                      </div>
 
-              <q-input
-                v-model="remittanceForm.remittanceReference"
-                outlined
-                :disable="remittanceWritesDisabled"
-                label="Payment reference"
-                hint="Optional transfer or receipt code"
-              />
+                      <div class="text-body2 text-grey-8 q-mt-sm">
+                        {{ expense.vendor_name || 'Vendor not specified' }}
+                      </div>
 
-              <q-input
-                v-model="remittanceForm.notes"
-                outlined
-                type="textarea"
-                autogrow
-                :disable="remittanceWritesDisabled"
-                label="Notes"
-              />
-            </div>
+                      <div class="text-caption text-grey-7 q-mt-xs">
+                        {{ formatDateTime(expense.incurred_at) }}
+                        <span v-if="expense.expense_reference">
+                          / {{ expense.expense_reference }}
+                        </span>
+                      </div>
+                    </article>
+                  </div>
 
-            <div class="summary-pill-row q-mt-md">
-              <q-chip square color="amber-2" text-color="brown-10">
-                Current outstanding:
-                {{ formatMoney(selectedRetailerOutstandingAmount) }}
-              </q-chip>
-            </div>
-
-            <div class="form-footer">
-              <span class="text-caption text-grey-7">
-                Remittances stay separate from stock recognition so partial
-                collections remain auditable.
-              </span>
-
-              <q-btn
-                color="primary"
-                no-caps
-                type="submit"
-                label="Record remittance"
-                :disable="remittanceWritesDisabled"
-                :loading="isSubmittingRemittance"
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Remittance history</div>
-          <div class="section-title">Recent retailer cash receipts</div>
-        </q-card-section>
-
-        <q-card-section
-          v-if="workspace.remittances.length > 0"
-          class="list-stack"
-        >
-          <article
-            v-for="remittance in workspace.remittances"
-            :key="remittance.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{
-                remittance.retailer?.retailer_name ?? 'Retailer'
-              }}</strong>
-              <q-chip square color="green-1" text-color="green-10">
-                {{ formatMoney(remittance.amount) }}
-              </q-chip>
-            </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ remittanceLabel(remittance) }}
-            </div>
-
-            <div class="text-caption text-grey-7 q-mt-xs">
-              {{ formatDateTime(remittance.received_at) }}
-              <span v-if="remittance.reconciliation?.reconciliation_reference">
-                /
-                {{ remittance.reconciliation.reconciliation_reference }}
-              </span>
-            </div>
-          </article>
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="empty-state">
-            Remittance records will appear here after the first retailer payment
-            is posted.
-          </div>
-        </q-card-section>
-      </q-card>
-    </section>
-
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Expense workflow</div>
-          <div class="section-title"
-            >Capture operating costs against profit</div
-          >
-        </q-card-section>
-
-        <q-card-section>
-          <q-banner
-            v-if="expenseWritesDisabled"
-            rounded
-            class="bg-grey-2 text-grey-9 q-mb-md"
-          >
-            {{ expenseWriteMessage }}
-          </q-banner>
-
-          <q-form @submit.prevent="submitExpense">
-            <div class="inline-form-grid">
-              <q-input
-                v-model="expenseForm.expenseCategory"
-                outlined
-                :disable="expenseWritesDisabled"
-                label="Expense category"
-              />
-
-              <q-input
-                v-model="expenseForm.incurredOn"
-                outlined
-                type="date"
-                :disable="expenseWritesDisabled"
-                label="Expense date"
-              />
-
-              <q-input
-                v-model="expenseForm.amount"
-                outlined
-                type="number"
-                min="0"
-                step="100"
-                :disable="expenseWritesDisabled"
-                label="Expense amount"
-              />
-
-              <q-input
-                v-model="expenseForm.vendorName"
-                outlined
-                :disable="expenseWritesDisabled"
-                label="Vendor or payee"
-              />
-
-              <q-input
-                v-model="expenseForm.expenseReference"
-                outlined
-                :disable="expenseWritesDisabled"
-                label="Reference"
-                hint="Optional invoice, fuel, or voucher number"
-              />
-
-              <q-input
-                v-model="expenseForm.notes"
-                outlined
-                type="textarea"
-                autogrow
-                :disable="expenseWritesDisabled"
-                label="Notes"
-              />
-            </div>
-
-            <div class="form-footer">
-              <span class="text-caption text-grey-7">
-                Operating expenses reduce the gross margin view without changing
-                inventory truth.
-              </span>
-
-              <q-btn
-                color="primary"
-                no-caps
-                type="submit"
-                label="Record expense"
-                :disable="expenseWritesDisabled"
-                :loading="isSubmittingExpense"
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Expense history</div>
-          <div class="section-title">Recent operating expenses</div>
-        </q-card-section>
-
-        <q-card-section v-if="workspace.expenses.length > 0" class="list-stack">
-          <article
-            v-for="expense in workspace.expenses"
-            :key="expense.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{ expense.expense_category }}</strong>
-              <q-chip square color="blue-1" text-color="blue-10">
-                {{ formatMoney(expense.amount) }}
-              </q-chip>
-            </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ expense.vendor_name || 'Vendor not specified' }}
-            </div>
-
-            <div class="text-caption text-grey-7 q-mt-xs">
-              {{ formatDateTime(expense.incurred_at) }}
-              <span v-if="expense.expense_reference">
-                / {{ expense.expense_reference }}
-              </span>
-            </div>
-          </article>
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="empty-state">
-            Expense records will appear here after the first operating cost is
-            entered.
-          </div>
-        </q-card-section>
-      </q-card>
-    </section>
-
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Reconciliation history</div>
-          <div class="section-title">Recent stock settlement snapshots</div>
-        </q-card-section>
-
-        <q-card-section
-          v-if="workspace.reconciliations.length > 0"
-          class="list-stack"
-        >
-          <article
-            v-for="reconciliation in workspace.reconciliations"
-            :key="reconciliation.id"
-            class="list-card"
-          >
-            <div class="detail-row">
-              <strong>{{ reconciliationLabel(reconciliation) }}</strong>
-              <q-chip square color="amber-2" text-color="brown-10">
-                {{ formatMoney(reconciliation.total_sales_value) }}
-              </q-chip>
-            </div>
-
-            <div class="text-body2 text-grey-8 q-mt-sm">
-              {{ reconciliation.retailer?.retailer_name ?? 'Retailer' }} /
-              {{ formatDateTime(reconciliation.reconciled_at) }}
-            </div>
-
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip square color="grey-2" text-color="grey-9">
-                Sold {{ formatQuantity(reconciliation.total_sold_quantity) }}
-              </q-chip>
-              <q-chip square color="grey-2" text-color="grey-9">
-                Returned
-                {{ formatQuantity(reconciliation.total_returned_quantity) }}
-              </q-chip>
-              <q-chip square color="grey-2" text-color="grey-9">
-                Damaged
-                {{ formatQuantity(reconciliation.total_damaged_quantity) }}
-              </q-chip>
-              <q-chip square color="grey-2" text-color="grey-9">
-                Remaining
-                {{ formatQuantity(reconciliation.total_remaining_quantity) }}
-              </q-chip>
-            </div>
-
-            <div class="summary-pill-row q-mt-sm">
-              <q-chip
-                v-for="item in reconciliation.items ?? []"
-                :key="item.id"
-                square
-                color="grey-2"
-                text-color="grey-9"
-              >
-                {{ item.variant?.sku ?? 'Variant' }} /
-                {{ item.batch?.batch_code ?? 'Batch' }} / sold
-                {{ formatQuantity(item.quantity_sold) }} / left
-                {{ formatQuantity(item.quantity_remaining) }}
-              </q-chip>
-            </div>
-          </article>
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="empty-state">
-            Reconciliation history will appear here after retailer stock is
-            counted and posted.
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Gross profit view</div>
-          <div class="section-title"
-            >How the current finance picture is built</div
-          >
-        </q-card-section>
-
-        <q-card-section class="detail-list">
-          <div class="detail-row">
-            <span>Issued to retailers</span>
-            <strong
-              >{{ formatQuantity(profitSummary.issued_quantity) }} jars</strong
-            >
-          </div>
-
-          <div class="detail-row">
-            <span>Sold through reconciliation</span>
-            <strong
-              >{{ formatQuantity(profitSummary.sold_quantity) }} jars</strong
-            >
-          </div>
-
-          <div class="detail-row">
-            <span>Returned to warehouse</span>
-            <strong>
-              {{ formatQuantity(profitSummary.returned_quantity) }} jars
-            </strong>
-          </div>
-
-          <div class="detail-row">
-            <span>Damaged at retailer</span>
-            <strong>
-              {{ formatQuantity(profitSummary.damaged_quantity) }} jars
-            </strong>
-          </div>
-
-          <div class="detail-row">
-            <span>Still at retailers</span>
-            <strong>
-              {{ formatQuantity(profitSummary.remaining_quantity) }} jars
-            </strong>
-          </div>
-
-          <div class="detail-row">
-            <span>Recognized sales</span>
-            <strong>{{
-              formatMoney(profitSummary.recognized_sales_value)
-            }}</strong>
-          </div>
-
-          <div class="detail-row">
-            <span>Cost of goods sold</span>
-            <strong>{{ formatMoney(profitSummary.cost_of_goods_sold) }}</strong>
-          </div>
-
-          <div class="detail-row">
-            <span>Gross profit</span>
-            <strong>{{ formatMoney(profitSummary.gross_profit) }}</strong>
-          </div>
-
-          <div class="detail-row">
-            <span>Operating expenses</span>
-            <strong>{{ formatMoney(profitSummary.operating_expenses) }}</strong>
-          </div>
-
-          <div class="detail-row">
-            <span>Net result</span>
-            <q-chip
-              square
-              :color="profitSummary.net_profit >= 0 ? 'green-1' : 'red-1'"
-              :text-color="
-                profitSummary.net_profit >= 0 ? 'green-10' : 'red-10'
-              "
-            >
-              {{ formatMoney(profitSummary.net_profit) }}
-            </q-chip>
-          </div>
-
-          <div class="detail-row">
-            <span>Remitted so far</span>
-            <strong>{{ formatMoney(profitSummary.remitted_amount) }}</strong>
-          </div>
-
-          <div class="detail-row">
-            <span>Outstanding from retailers</span>
-            <strong>{{ formatMoney(profitSummary.outstanding_amount) }}</strong>
-          </div>
-        </q-card-section>
+                  <div v-else class="empty-state q-mt-lg">
+                    Expense records will appear here after the first operating
+                    cost is entered.
+                  </div>
+                </div>
+              </div>
+            </section>
+          </q-tab-panel>
+        </q-tab-panels>
       </q-card>
     </section>
   </q-page>
@@ -864,6 +921,7 @@ function toIsoTimestamp(dateValue) {
 
 const $q = useQuasar()
 const workspace = ref(getPreviewFinanceWorkspace())
+const activeWorkspaceTab = ref('snapshot')
 const isLoading = ref(false)
 const isSubmittingReconciliation = ref(false)
 const isSubmittingRemittance = ref(false)
@@ -1096,27 +1154,27 @@ const expenseWriteMessage = computed(() => {
 const metrics = computed(() => [
   {
     label: 'Sales',
-    title: 'Recognized revenue',
+    title: 'Recognized sales',
     value: formatMoney(profitSummary.value.recognized_sales_value),
-    text: `${formatQuantity(profitSummary.value.sold_quantity)} jars are recognized through posted reconciliations.`
+    text: `${formatQuantity(profitSummary.value.sold_quantity)} jars settled.`
   },
   {
     label: 'Cash',
-    title: 'Remitted so far',
+    title: 'Remitted',
     value: formatMoney(profitSummary.value.remitted_amount),
-    text: `${formatQuantity(workspace.value.remittances.length)} remittance records are linked to retailer balances.`
+    text: `${formatQuantity(workspace.value.remittances.length)} receipts posted.`
   },
   {
     label: 'Margin',
-    title: 'Gross profit before expenses',
+    title: 'Gross profit',
     value: formatMoney(profitSummary.value.gross_profit),
-    text: 'Gross profit stays tied to traced batch cost.'
+    text: 'Before operating expenses.'
   },
   {
     label: 'Collections',
-    title: 'Retailer outstanding',
+    title: 'Outstanding',
     value: formatMoney(profitSummary.value.outstanding_amount),
-    text: `${retailersWithOutstanding.value} retailers still need collection follow-up.`
+    text: `${retailersWithOutstanding.value} retailers need follow-up.`
   }
 ])
 
