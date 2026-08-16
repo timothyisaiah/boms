@@ -2,12 +2,10 @@
   <q-page class="page-layout">
     <section class="page-hero">
       <div>
-        <p class="page-hero__eyebrow">Phase 2 delivery</p>
-        <h1 class="page-hero__title">Supply and production control tower</h1>
+        <p class="page-hero__eyebrow">Operations</p>
+        <h1 class="page-hero__title">Supply and production</h1>
         <p class="page-hero__body">
-          Purchasing, material lot visibility, production batch costing, and
-          finished output records now live in one workspace so Beecone can move
-          from reference data into auditable operational flow.
+          Receive materials, monitor open lots, and post traceable batches.
         </p>
       </div>
 
@@ -35,10 +33,8 @@
       rounded
       class="surface-card operations-banner bg-amber-1 text-brown-10"
     >
-      This workspace is showing the seeded phase 2 blueprint because Supabase is
-      not configured in the app yet. Add the env keys, then use `yarn
-      supabase:db:push` and `yarn supabase:seed` to unlock live purchasing and
-      production writes.
+      Preview mode is active. Connect Supabase and apply the hosted migrations
+      to unlock live purchasing and batching.
     </q-banner>
 
     <q-banner
@@ -165,8 +161,8 @@
 
         <q-card-section v-else>
           <div class="empty-state">
-            No purchase lots are available yet. Record a material receipt first,
-            then this list becomes the source of truth for batch consumption.
+            No open material lots yet. Record a purchase receipt to stock
+            production.
           </div>
         </q-card-section>
       </q-card>
@@ -185,8 +181,8 @@
             rounded
             class="bg-grey-2 text-grey-9 q-mb-md"
           >
-            Live purchase writes are disabled until the app is connected to a
-            Supabase project with the new migration applied.
+            Live purchase writes need a connected Supabase project with the
+            latest migrations.
           </q-banner>
 
           <q-form @submit.prevent="submitPurchase">
@@ -779,19 +775,19 @@ const metrics = computed(() => [
     label: 'Catalogue',
     title: 'Variants ready for production',
     value: `${workspace.value.variants.length}`,
-    text: 'Seeded product variants are available for purchasing, costing, and later warehouse stock flows.'
+    text: 'Active variants are ready for purchasing, costing, and batch output.'
   },
   {
     label: 'Supply',
     title: 'Materials and suppliers in play',
     value: `${workspace.value.materials.length} materials / ${workspace.value.suppliers.length} suppliers`,
-    text: 'Reference data now covers honey, packaging, and sample vendors for early operational data entry.'
+    text: 'Honey, packaging, and supplier masters are ready for entry.'
   },
   {
     label: 'Transactions',
     title: 'Purchases and batches recorded',
     value: `${workspace.value.purchases.length} purchases / ${workspace.value.batches.length} batches`,
-    text: 'The live workflow writes receipts into lots, then converts those lots into traceable finished output.'
+    text: 'Receipts create lots, and lots feed completed batches.'
   }
 ])
 

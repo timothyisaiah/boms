@@ -26,7 +26,7 @@ const routes = [
         name: 'dashboard',
         component: () => import('@/pages/IndexPage.vue'),
         meta: {
-          title: 'Operations dashboard'
+          title: 'Dashboard'
         }
       },
       {
@@ -34,7 +34,7 @@ const routes = [
         name: 'operations',
         component: () => import('@/pages/OperationsPage.vue'),
         meta: {
-          title: 'Supply and production control tower',
+          title: 'Operations',
           allowedRoles: [
             'admin_owner',
             'operations_manager',
@@ -48,7 +48,7 @@ const routes = [
         name: 'retail',
         component: () => import('@/pages/RetailPage.vue'),
         meta: {
-          title: 'Warehouse and distribution workspace',
+          title: 'Distribution',
           allowedRoles: [
             'admin_owner',
             'operations_manager',
@@ -63,7 +63,7 @@ const routes = [
         name: 'finance',
         component: () => import('@/pages/FinancePage.vue'),
         meta: {
-          title: 'Finance workspace',
+          title: 'Finance',
           allowedRoles: [
             'admin_owner',
             'operations_manager',

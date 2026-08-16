@@ -2,11 +2,10 @@
   <q-page class="page-layout">
     <section class="page-hero">
       <div>
-        <p class="page-hero__eyebrow">Security foundation</p>
+        <p class="page-hero__eyebrow">Admin</p>
         <h1 class="page-hero__title">Access and settings</h1>
         <p class="page-hero__body">
-          This admin-only workspace is where Beecone can audit the auth
-          foundation before deeper modules are layered on top of it.
+          Review environment status and current role assignments.
         </p>
       </div>
     </section>

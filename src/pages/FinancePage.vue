@@ -2,13 +2,11 @@
   <q-page class="page-layout">
     <section class="page-hero">
       <div>
-        <p class="page-hero__eyebrow">Phase 4 delivery</p>
-        <h1 class="page-hero__title">Reconciliation and finance workspace</h1>
+        <p class="page-hero__eyebrow">Finance</p>
+        <h1 class="page-hero__title">Reconciliation and cash</h1>
         <p class="page-hero__body">
-          Beecone can now reconcile retailer stock without overwriting history.
-          Sold, returned, damaged, remaining, remitted, and expense records all
-          feed the same balance and gross profit views so finance can explain
-          every number back to a real stock movement.
+          Settle retailer stock, record cash, and review margin without losing
+          traceability.
         </p>
       </div>
 
@@ -36,10 +34,8 @@
       rounded
       class="surface-card operations-banner bg-amber-1 text-brown-10"
     >
-      This workspace is showing the seeded phase 4 blueprint because Supabase is
-      not configured in the app yet. Apply the latest hosted migration and
-      connect the app env keys to unlock live reconciliations, remittances, and
-      expense tracking.
+      Preview mode is active. Connect Supabase and apply the latest hosted
+      migration to unlock live reconciliations, remittances, and expenses.
     </q-banner>
 
     <q-banner
@@ -1102,25 +1098,25 @@ const metrics = computed(() => [
     label: 'Sales',
     title: 'Recognized revenue',
     value: formatMoney(profitSummary.value.recognized_sales_value),
-    text: `${formatQuantity(profitSummary.value.sold_quantity)} jars have been recognized as sold through posted reconciliations.`
+    text: `${formatQuantity(profitSummary.value.sold_quantity)} jars are recognized through posted reconciliations.`
   },
   {
     label: 'Cash',
     title: 'Remitted so far',
     value: formatMoney(profitSummary.value.remitted_amount),
-    text: `${formatQuantity(workspace.value.remittances.length)} remittance records are now tied back to retailer balances.`
+    text: `${formatQuantity(workspace.value.remittances.length)} remittance records are linked to retailer balances.`
   },
   {
     label: 'Margin',
     title: 'Gross profit before expenses',
     value: formatMoney(profitSummary.value.gross_profit),
-    text: `Recognized sales less cost of goods sold stays explainable because every sale still points to a traced batch cost.`
+    text: 'Gross profit stays tied to traced batch cost.'
   },
   {
     label: 'Collections',
     title: 'Retailer outstanding',
     value: formatMoney(profitSummary.value.outstanding_amount),
-    text: `${retailersWithOutstanding.value} retailers currently need collection follow-up.`
+    text: `${retailersWithOutstanding.value} retailers still need collection follow-up.`
   }
 ])
 

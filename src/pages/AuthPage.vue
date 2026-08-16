@@ -10,9 +10,8 @@
           >Trace every batch with the right people in the right places.</h1
         >
         <p class="auth-hero__body">
-          BOMS starts with secure access. Every purchase, batch movement,
-          reconciliation, and remittance should be tied to a real teammate with
-          a clear role.
+          BOMS starts with secure access so every purchase, batch, and
+          remittance stays tied to a real teammate.
         </p>
 
         <div class="auth-hero__highlights">
@@ -132,8 +131,8 @@
             </q-input>
 
             <p v-if="mode === 'sign-up'" class="auth-form__hint">
-              New accounts still need a Beecone admin to assign a BOMS role
-              before restricted modules unlock.
+              New accounts still need an admin role assignment before restricted
+              modules open.
             </p>
 
             <q-btn
@@ -185,17 +184,17 @@ const form = reactive({
 const highlights = [
   {
     title: 'Role-based entry',
-    text: 'Warehouse, finance, operations, and leadership each start with the routes they actually need.',
+    text: 'Each team starts with the routes and actions it actually needs.',
     icon: 'admin_panel_settings'
   },
   {
     title: 'Traceability first',
-    text: 'Every future stock movement and financial event can now be tied back to an authenticated user.',
+    text: 'Stock movement and financial activity stay linked to an authenticated user.',
     icon: 'route'
   },
   {
     title: 'Supabase ready',
-    text: 'Session persistence and guarded navigation are already wired for the Beecone MVP foundation.',
+    text: 'Session persistence and guarded navigation are already wired in.',
     icon: 'verified_user'
   }
 ]

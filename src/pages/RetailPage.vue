@@ -2,13 +2,11 @@
   <q-page class="page-layout">
     <section class="page-hero">
       <div>
-        <p class="page-hero__eyebrow">Phase 3 delivery</p>
-        <h1 class="page-hero__title">Warehouse and distribution workspace</h1>
+        <p class="page-hero__eyebrow">Distribution</p>
+        <h1 class="page-hero__title">Warehouse and retail stock</h1>
         <p class="page-hero__body">
-          Finished jars now stay traceable after production. Warehouse staff and
-          distribution teams can see batch-level stock, issue it to retailers,
-          and review the movement history that Phase 4 reconciliation now
-          settles into sales, returns, damage, and retailer balances.
+          Issue batch-traceable stock, track retailer movement, and keep store
+          balances visible.
         </p>
       </div>
 
@@ -36,9 +34,8 @@
       rounded
       class="surface-card operations-banner bg-amber-1 text-brown-10"
     >
-      This workspace is showing the seeded phase 3 blueprint because Supabase is
-      not configured in the app yet. Apply the latest hosted migration and
-      connect the app env keys to unlock live stock issues and retailer ledgers.
+      Preview mode is active. Connect Supabase and apply the latest hosted
+      migration to unlock live dispatch and ledger writes.
     </q-banner>
 
     <q-banner
@@ -104,9 +101,8 @@
 
         <q-card-section v-else>
           <div class="empty-state">
-            No finished stock is open in the warehouse yet. Complete a
-            production batch first, then distribution can issue the resulting
-            jars by batch.
+            No finished stock is open yet. Complete a production batch to start
+            issuing stock.
           </div>
         </q-card-section>
       </q-card>
@@ -667,19 +663,19 @@ const metrics = computed(() => [
     label: 'Partners',
     title: 'Retailers ready for dispatch',
     value: `${workspace.value.retailers.length}`,
-    text: 'Retail partners are now first-class records for future reconciliation, remittance, and exception tracking.'
+    text: 'Retail partners are ready for dispatch, review, and follow-up.'
   },
   {
     label: 'Warehouse',
     title: 'Open finished stock by batch',
     value: `${formatQuantity(totalOpenUnits.value)} jars`,
-    text: 'Finished goods stay visible at the batch level so stock issues never lose costing or traceability context.'
+    text: 'Finished goods stay visible by batch so issues keep costing context.'
   },
   {
     label: 'Distribution',
     title: 'Retailers carrying issued stock',
     value: `${activeRetailerBalances.value}`,
-    text: 'The retailer ledger now shows who is holding stock before any sale, return, or remittance is recognized.'
+    text: 'The retailer ledger shows who is holding stock before settlement.'
   }
 ])
 

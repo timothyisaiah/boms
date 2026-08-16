@@ -32,6 +32,7 @@
     "supabase:seed-admin:production": "node supabase/provision-admin-user.mjs --mode production"
   },
   "dependencies": {
+    "@fontsource/montserrat": "^5.3.0",
     "@quasar/extras": "^2.0.0",
     "@supabase/supabase-js": "^2.111.0",
     "quasar": "^2.23.3",

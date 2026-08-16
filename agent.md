@@ -213,7 +213,7 @@ The first usable release should focus on the smallest system that gives Beecone 
 
 ## Implementation Progress Tracker
 
-Last updated: August 2, 2026
+Last updated: August 16, 2026
 
 Use this checklist as the implementation source of truth. Update it whenever a
 phase item materially changes from planned to delivered.
@@ -256,13 +256,13 @@ phase item materially changes from planned to delivered.
 
 ### Phase 5: Reporting and Hardening
 
-- [ ] Build dashboards and monthly review views
+- [x] Build dashboards and monthly review views
 - [ ] Add alerts for low stock and expiring batches
 - [ ] Improve audit logs, validation, and usability
 
 ## Current Delivery Snapshot
 
-As of August 2, 2026, the current implementation includes:
+As of August 16, 2026, the current implementation includes:
 
 - Supabase-backed authentication and role-aware route protection
 - `public.user_profiles` sync from `auth.users`
@@ -282,6 +282,8 @@ As of August 2, 2026, the current implementation includes:
   recognition
 - expense entry and finance summary views for outstanding balances, gross
   profit, and net result review
+- a role-aware dashboard with monthly review, trend, watchlist, and activity
+  views for phase 5 reporting
 - phase 2, phase 3, and phase 4 workspaces in the app for supply, production,
   warehouse, distribution, and finance workflows
 
