@@ -56,16 +56,7 @@
 
         <q-card-section>
           <q-banner
-            v-if="!isSupabaseConfigured"
-            class="bg-orange-1 text-dark rounded-borders q-mb-md"
-          >
-            Configure <code>VITE_SUPABASE_URL</code> and
-            <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> in a local
-            <code>.env</code> file before using live authentication.
-          </q-banner>
-
-          <q-banner
-            v-else-if="statusMessage"
+            v-if="statusMessage"
             class="bg-secondary text-white rounded-borders q-mb-md"
           >
             {{ statusMessage }}
@@ -124,6 +115,7 @@
                   flat
                   round
                   dense
+                  aria-label="Show or hide password"
                   :icon="showPassword ? 'visibility_off' : 'visibility'"
                   @click="showPassword = !showPassword"
                 />
@@ -142,6 +134,7 @@
               type="submit"
               size="lg"
               :loading="isBusy"
+              :disable="isBusy"
               :label="
                 mode === 'sign-in'
                   ? 'Sign in to BOMS'
@@ -162,7 +155,6 @@ import {
   authState,
   getDefaultRouteForRole,
   isSelfRegistrationEnabled,
-  isSupabaseConfigured,
   resolveSafeRedirect,
   signInWithPassword,
   signUpWithPassword
@@ -193,7 +185,7 @@ const highlights = [
     icon: 'route'
   },
   {
-    title: 'Supabase ready',
+    title: 'Secure access',
     text: 'Session persistence and guarded navigation are already wired in.',
     icon: 'verified_user'
   }
@@ -209,6 +201,7 @@ function toggleMode() {
 }
 
 async function submitForm() {
+  if (isBusy.value) return
   errorMessage.value = ''
   statusMessage.value = ''
 

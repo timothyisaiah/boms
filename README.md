@@ -1,141 +1,88 @@
-# beecone (boms)
+# Beecone Operations Management System
 
-## Install the dependencies
+Vue 3 + Quasar frontend, TypeScript API functions, Neon Postgres, and Drizzle's HTTP adapter. Inventory and accounting transactions run in Postgres. The browser uses same-origin `/api` endpoints and an opaque session cookie.
 
-```bash
-yarn install
+## Development without Docker
+
+Use Node 24 and Yarn. Install with `yarn install`. Copy `.env.example` to `.env.development` and configure the server-only `DATABASE_URL` for the intended Neon development branch. Never prefix database credentials with `VITE_` or commit environment files.
+
+```sh
+yarn neon:migrate
+yarn neon:seed
+yarn neon:provision-user
 ```
 
-### Start the app in development mode (HMR, error reporting, etc.)
+Provisioning reads `BOMS_ADMIN_EMAIL`, `BOMS_ADMIN_PASSWORD`, `BOMS_ADMIN_FULL_NAME`, and `BOMS_ADMIN_ROLE`. Passwords must be 12–72 bytes. Existing users and reference records are preserved.
 
-```bash
-yarn dev
+Start these in separate terminals:
+
+```sh
+yarn dev:api
 ```
 
-### Format & Lint the files
-
-```bash
-yarn lint
+```sh
+yarn dev --host localhost --port 9000
 ```
 
-...or just check formatting & linting:
+Open `http://localhost:9000`. Quasar proxies `/api` to the local API on port 3001. Use localhost for secure-cookie development; hosted use requires HTTPS. Create variant prices and optional production recipes in Administration before recording sales reconciliations.
 
-```bash
+## Add and manage supply materials
+
+Use **Operations → Add material** for raw honey, packaging, or spices. Enter a unique code,
+name, type, unit of measure, and low-stock threshold. Use **Manage materials** to
+search by name/code/description, filter by type or active status, view available
+stock, edit details and thresholds, or deactivate/reactivate a material.
+
+Owners, operations managers, and warehouse staff can make changes. Type and unit
+stay fixed after creation to preserve inventory and costing consistency. Record
+a purchase receipt to add stock. Inactive materials leave receipt pickers while
+their existing lots and transaction history remain available.
+
+## Add and manage product variants
+
+Use **Operations → Add variant** to add a variant to an existing active product, or
+create its product in the same step. Enter the SKU, name, flavour, pack size,
+packaging type, and finished-goods low-stock threshold. **Manage variants** lets
+owners and operations managers search, edit, deactivate, and reactivate variants.
+Active variants appear in the production-batch picker. A variant stays attached to
+its original product so completed batches and costing history remain consistent.
+
+## Add suppliers and retailers
+
+Use **Operations → Add supplier** or **Distribution → Add retailer** at the top of the workspace. Enter the name and any contact details; suppliers also have a supplier type, and retailers can have a delivery location. After saving, the new record is selected in the purchase or stock-issue picker. Duplicate names are rejected and interrupted submissions can be retried safely.
+
+Use **Manage suppliers** or **Manage retailers** beside the add button to search every profile by name, contact person, phone, email, or delivery location. Filter by active/inactive status, open a profile, edit its details, and control whether it is active. Inactive partners remain in historical records and reports but disappear from new purchase and stock-issue pickers.
+
+Owners, operations managers, and warehouse staff can add suppliers and retailers. Sales/distribution staff can also add retailers.
+
+## Add users and manage access
+
+Sign in as an **Admin / Owner**, open **Access and settings**, and use **Users and access → Add user**. Enter the person's name, sign-in email, role, and an initial password of at least 12 characters. Share that password securely; it is not emailed automatically.
+
+Use **Edit access** on a user card to change their name or role, deactivate/reactivate the account, or set a new password. Deactivation and password resets revoke existing sessions. Leave the password blank to keep it unchanged. Your own role and active status must be changed by another administrator; the server also protects the last active administrator. Access changes are audited without recording passwords.
+
+## Validation
+
+```sh
+yarn typecheck
+yarn test
+yarn test:neon
+yarn test:users:neon
+yarn test:mobile
 yarn lint:check
-```
-
-### Build the app for production
-
-```bash
 yarn build
 ```
 
-### Customize the configuration
+`test` runs migrations and accounting scenarios in embedded PGlite, without Docker. `test:neon` runs real API handlers and concurrent transactions on `.env.development`'s database, then removes its own uniquely identified fixtures; use `BOMS_TEST_DATABASE_URL` to select a separate migrated Neon test branch. It also exercises the normal expired-session/idempotency cleanup job. `test:mobile` runs Chrome at 375, 390, and 1280 pixels using API fixtures. Chrome must be installed.
 
-See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-file).
+An optional live browser smoke check is available with `BOMS_LIVE_UI=1` when `dev:api` is running. It reads `BOMS_ADMIN_*` from the process environment or `.env.development.local` / `.env.development`, and signs out after checking the workspaces. Screenshots/traces are disabled for this credential-bearing check.
 
-## Auth setup
+## Migrations and deployment
 
-Copy `.env.example` to `.env` and provide these values:
+Add forward-only SQL files under `neon/migrations/`. The migration runner checks applied-file hashes and uses a transaction per migration; never modify an applied file. Test risky changes on an isolated Neon branch before applying them to a shared database. The supplied Neon database has been migrated and reference-seeded; the existing configured administrator has been provisioned.
 
-```bash
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-VITE_SUPABASE_ALLOW_SIGN_UP=false
+`vercel.json` defines the Quasar build (`dist/spa`), serverless `/api` functions, and a daily cleanup schedule. Configure `DATABASE_URL` and a random server-only `CRON_SECRET` of at least 32 characters on the deployment. The Vercel project and Neon integration have **not** been linked or deployed here. Vercel's published [Hobby restrictions](https://vercel.com/docs/plans/hobby) limit it to personal, non-commercial use, so this business deployment needs an eligible existing arrangement consistent with the no-added-cost requirement.
 
-SUPABASE_URL=...
-SUPABASE_SECRET_KEY=sb_secret_...
-SUPABASE_ADMIN_EMAIL=admin@beecone.local
-SUPABASE_ADMIN_PASSWORD=ChangeMe123!
-SUPABASE_ADMIN_FULL_NAME=Beecone Administrator
-SUPABASE_ADMIN_ROLE=admin_owner
-```
+Supabase was decommissioned on September 12, 2026. The hosted project was deleted after a verified database export. At the owner's request, August operational history is retained only in the private `.backups/supabase-2026-09-12/` archive and was not imported into Neon. Legacy SQL is preserved under `docs/archive/supabase/migrations/`; all current database work uses Neon. See the [retirement and backup record](docs/supabase-retirement.md).
 
-The app now expects Beecone roles to come from `public.user_profiles` first, then falls back to Supabase `app_metadata`. Supported roles are:
-
-- `admin_owner`
-- `operations_manager`
-- `production_staff`
-- `warehouse_staff`
-- `sales_or_distribution_staff`
-- `finance_accountant`
-- `read_only_management`
-
-Protected routes are already in place for operations, retail, finance, and admin workspaces.
-
-## Supabase migrations and seed
-
-This repo now includes:
-
-- `supabase/config.toml`
-- `supabase/migrations/20260802164000_auth_roles_and_user_profiles.sql`
-- `supabase/migrations/20260802183000_supply_and_production_foundation.sql`
-- `supabase/seed.sql`
-- `supabase/seed-reference-data.mjs`
-- `supabase/provision-admin-user.mjs`
-
-What they do:
-
-- `supabase/config.toml` turns this repo into a real Supabase local development project for the CLI.
-- The migration creates the `public.app_role` enum, the `public.user_profiles` table, sync triggers from `auth.users`, and RLS policies.
-- The supply and production migration adds product variants, materials, suppliers, purchasing tables, inventory lots, production batch tables, RLS, and RPC functions for purchase and batch entry.
-- The seed file creates a deterministic local admin-shaped auth row plus Beecone sample variants, materials, and suppliers for repeatable development state.
-- The hosted seed script upserts the same Beecone reference data directly into a linked or hosted Supabase project without requiring Docker.
-- The provisioning script creates or updates a real password-based administrator account through the Supabase Auth Admin API.
-
-Local workflow:
-
-```bash
-yarn supabase:start
-yarn supabase:db:reset
-```
-
-`yarn supabase:start` launches the local stack. `yarn supabase:db:reset` then recreates the local database, applies all migrations, and runs `supabase/seed.sql`.
-
-After the reset succeeds, the `/operations` route can load:
-
-- seeded product variants
-- seeded materials and suppliers
-- live purchase receipt entry via `public.record_purchase(...)`
-- live production batch creation via `public.record_production_batch(...)`
-
-Prerequisite:
-
-- Docker Desktop must be installed and running before local Supabase commands can reach the Docker engine.
-
-Hosted dev or staging workflow without Docker:
-
-```bash
-npx supabase login
-npx supabase link --project-ref <project-ref>
-yarn supabase:db:push
-yarn supabase:seed
-yarn supabase:seed-admin
-```
-
-`yarn supabase:db:push` applies pending migrations to the linked Supabase project. `yarn supabase:seed` then upserts Beecone reference data through the service key in your `.env`, and `yarn supabase:seed-admin` creates or updates the login-capable admin user on whichever project `SUPABASE_URL` points to.
-
-Env file loading for admin provisioning:
-
-- `yarn supabase:seed` reads `.env`, `.env.local`, `.env.development`, and `.env.development.local`
-- `yarn supabase:seed:production` reads `.env`, `.env.local`, `.env.production`, and `.env.production.local`
-- `yarn supabase:seed-admin` reads `.env`, `.env.local`, `.env.development`, and `.env.development.local`
-- `yarn supabase:seed-admin:production` reads `.env`, `.env.local`, `.env.production`, and `.env.production.local`
-
-Important:
-
-- `VITE_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY` are application/runtime credentials. They do not tell the Supabase CLI where to apply migrations.
-- CLI migration commands target either a local stack or a linked remote project. For a hosted project, use `supabase login`, `supabase link --project-ref <project-ref>`, and then `yarn supabase:db:push`.
-- `supabase db reset` is local by default. If you are not using Docker/local Supabase, use `yarn supabase:db:push`, `yarn supabase:seed`, and `yarn supabase:seed-admin` instead.
-
-Notes:
-
-- `supabase db reset` is local by default and requires the local stack to be started first.
-- `yarn supabase:seed:local` is just a convenience alias for the Docker-based local reset workflow.
-- `yarn supabase:start`, `yarn supabase:db:reset`, and `yarn supabase:db:push` do not require a globally installed `supabase` binary.
-- `yarn supabase:seed` is the Docker-free reference-data seeding path for hosted projects.
-- `yarn supabase:seed-admin` now reads `.env` automatically.
-- `VITE_SUPABASE_PUBLISHABLE_KEY` is the only supported frontend key in this project.
-- `SUPABASE_SECRET_KEY` must be a server-side secret key. A publishable client key will be rejected.
-- In Quasar CLI with Vite, plain dotenv vars are backend-visible by default. This project explicitly forwards the Supabase `VITE_*` values through `quasar.config.js > build.defineEnv` so the client app in `src/` can read them.
-- Quasar only auto-loads `.env` and `.env.local` by default. This project explicitly registers `.env.development` and `.env.production` in `quasar.config.js > build.env.file`.
+See [migration and validation notes](docs/neon-migration.md), [mobile audit](docs/mobile-audit.md), and the authoritative [phase tracker](agent.md).

@@ -14,10 +14,10 @@
           </q-chip>
           <q-chip
             square
-            :color="workspace.mode === 'preview' ? 'orange-2' : 'green-1'"
+            :color="workspace.mode !== 'live' ? 'orange-2' : 'green-1'"
             :text-color="workspace.mode === 'preview' ? 'brown-10' : 'green-10'"
           >
-            {{ workspace.mode === 'preview' ? 'Preview data' : 'Live data' }}
+            {{ workspace.mode === 'preview' ? 'Unavailable' : 'Live data' }}
           </q-chip>
           <q-chip square color="brown-2" text-color="brown-10">
             {{ roleLabel }}
@@ -53,8 +53,7 @@
       rounded
       class="surface-card operations-banner bg-amber-1 text-brown-10"
     >
-      Preview mode is active. Connect Supabase and apply the latest migrations
-      to load live dashboard data.
+      Live data is unavailable. Refresh when your connection is restored.
     </q-banner>
 
     <q-banner
@@ -83,89 +82,101 @@
 
     <template v-if="activeView === 'dashboard'">
       <section class="card-grid dashboard-card-grid--feature">
-        <q-card flat class="surface-card">
-          <q-card-section>
-            <div class="section-label">Trend</div>
-            <div class="section-title">{{ trendTitle }}</div>
-          </q-card-section>
+        <q-card flat class="surface-card dashboard-trend-card">
+          <q-btn
+            v-if="$q.screen.lt.md"
+            class="full-width"
+            flat
+            no-caps
+            :label="showTrends ? 'Hide trends' : 'Explore monthly trends'"
+            :aria-expanded="showTrends"
+            @click="showTrends = !showTrends"
+          />
+          <template v-if="$q.screen.gt.sm || showTrends">
+            <q-card-section>
+              <div class="section-label">Trend</div>
+              <div class="section-title">{{ trendTitle }}</div>
+            </q-card-section>
 
-          <q-card-section class="dashboard-trend-shell">
-            <div v-if="selectedMonth" class="dashboard-trend-focus">
-              <div class="dashboard-trend-focus__eyebrow">Selected month</div>
+            <q-card-section class="dashboard-trend-shell">
+              <div v-if="selectedMonth" class="dashboard-trend-focus">
+                <div class="dashboard-trend-focus__eyebrow">Selected month</div>
 
-              <div class="dashboard-trend-focus__header">
-                <div>
-                  <div class="dashboard-trend-focus__month">
-                    {{ selectedMonth.label }}
+                <div class="dashboard-trend-focus__header">
+                  <div>
+                    <div class="dashboard-trend-focus__month">
+                      {{ selectedMonth.label }}
+                    </div>
+                    <div class="dashboard-trend-focus__value">
+                      {{ formatTrendValue(selectedMonth) }}
+                    </div>
                   </div>
-                  <div class="dashboard-trend-focus__value">
-                    {{ formatTrendValue(selectedMonth) }}
-                  </div>
+
+                  <q-chip square color="amber-2" text-color="brown-10">
+                    {{ trendModeChip }}
+                  </q-chip>
                 </div>
 
-                <q-chip square color="amber-2" text-color="brown-10">
-                  {{ trendModeChip }}
-                </q-chip>
+                <p class="dashboard-trend-focus__summary">
+                  {{ trendMeta(selectedMonth) }}
+                </p>
+
+                <div class="dashboard-trend-focus__delta">
+                  {{ selectedTrendComparison }}
+                </div>
+
+                <div class="dashboard-trend-focus__stats">
+                  <div
+                    v-for="item in trendFocusStats"
+                    :key="item.label"
+                    class="dashboard-trend-focus__stat"
+                  >
+                    <div class="dashboard-trend-focus__stat-label">
+                      {{ item.label }}
+                    </div>
+                    <div class="dashboard-trend-focus__stat-value">
+                      {{ item.value }}
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <p class="dashboard-trend-focus__summary">
-                {{ trendMeta(selectedMonth) }}
-              </p>
-
-              <div class="dashboard-trend-focus__delta">
-                {{ selectedTrendComparison }}
-              </div>
-
-              <div class="dashboard-trend-focus__stats">
-                <div
-                  v-for="item in trendFocusStats"
-                  :key="item.label"
-                  class="dashboard-trend-focus__stat"
+              <div class="dashboard-trend-list">
+                <button
+                  v-for="month in workspace.months"
+                  :key="month.key"
+                  type="button"
+                  class="dashboard-trend-row"
+                  :class="{
+                    'dashboard-trend-row--active':
+                      month.key === selectedMonthKey
+                  }"
+                  :aria-pressed="month.key === selectedMonthKey"
+                  @click="selectedMonthKey = month.key"
                 >
-                  <div class="dashboard-trend-focus__stat-label">
-                    {{ item.label }}
+                  <div class="dashboard-trend-row__meta">
+                    <span class="dashboard-trend-row__label">{{
+                      month.label
+                    }}</span>
+                    <span class="dashboard-trend-row__hint">{{
+                      trendMeta(month)
+                    }}</span>
                   </div>
-                  <div class="dashboard-trend-focus__stat-value">
-                    {{ item.value }}
+
+                  <div class="dashboard-trend-row__bar">
+                    <span
+                      class="dashboard-trend-row__fill"
+                      :style="{ width: `${trendWidth(month)}%` }"
+                    />
                   </div>
-                </div>
+
+                  <div class="dashboard-trend-row__value">
+                    {{ formatTrendValue(month) }}
+                  </div>
+                </button>
               </div>
-            </div>
-
-            <div class="dashboard-trend-list">
-              <button
-                v-for="month in workspace.months"
-                :key="month.key"
-                type="button"
-                class="dashboard-trend-row"
-                :class="{
-                  'dashboard-trend-row--active': month.key === selectedMonthKey
-                }"
-                :aria-pressed="month.key === selectedMonthKey"
-                @click="selectedMonthKey = month.key"
-              >
-                <div class="dashboard-trend-row__meta">
-                  <span class="dashboard-trend-row__label">{{
-                    month.label
-                  }}</span>
-                  <span class="dashboard-trend-row__hint">{{
-                    trendMeta(month)
-                  }}</span>
-                </div>
-
-                <div class="dashboard-trend-row__bar">
-                  <span
-                    class="dashboard-trend-row__fill"
-                    :style="{ width: `${trendWidth(month)}%` }"
-                  />
-                </div>
-
-                <div class="dashboard-trend-row__value">
-                  {{ formatTrendValue(month) }}
-                </div>
-              </button>
-            </div>
-          </q-card-section>
+            </q-card-section>
+          </template>
         </q-card>
 
         <q-card flat class="surface-card">
@@ -304,6 +315,7 @@
       </section>
     </template>
 
+    <BusinessReport v-else-if="activeView === 'weekly'" weekly />
     <template v-else>
       <section class="card-grid card-grid--two">
         <q-card flat class="surface-card">
@@ -321,7 +333,9 @@
                 unelevated
                 :outline="month.key !== selectedMonthKey"
                 :color="month.key === selectedMonthKey ? 'primary' : 'brown-3'"
-                :text-color="month.key === selectedMonthKey ? 'white' : 'brown-9'"
+                :text-color="
+                  month.key === selectedMonthKey ? 'white' : 'brown-9'
+                "
                 :label="month.label"
                 @click="selectedMonthKey = month.key"
               />
@@ -389,12 +403,17 @@
           </q-card-section>
         </q-card>
       </section>
+      <BusinessReport :month="selectedMonthKey" />
     </template>
   </q-page>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
+import BusinessReport from '@/components/BusinessReport.vue'
+const $q = useQuasar()
+const showTrends = ref(false)
 import { getRoleLabel } from '@/constants/roles'
 import {
   fetchDashboardWorkspace,
@@ -407,6 +426,7 @@ const viewOptions = [
     label: 'Dashboard',
     value: 'dashboard'
   },
+  { label: 'Weekly', value: 'weekly' },
   {
     label: 'Monthly review',
     value: 'review'
@@ -425,7 +445,11 @@ const selectedMonth = computed(() => {
     month => month.key === selectedMonthKey.value
   )
 
-  return matchedMonth ?? workspace.value.months[workspace.value.months.length - 1] ?? null
+  return (
+    matchedMonth ??
+    workspace.value.months[workspace.value.months.length - 1] ??
+    null
+  )
 })
 const previousMonth = computed(() => {
   if (!selectedMonth.value) {
@@ -488,10 +512,7 @@ const trendModeChip = computed(() => {
 })
 
 const maxTrendValue = computed(() =>
-  Math.max(
-    ...workspace.value.months.map(month => getTrendValue(month)),
-    0
-  )
+  Math.max(...workspace.value.months.map(month => getTrendValue(month)), 0)
 )
 const selectedTrendComparison = computed(() => {
   if (!selectedMonth.value) {
@@ -1005,7 +1026,9 @@ function compareAgainstPrevious(currentValue, previousValue, type, unit = '') {
     return 'No prior month in range'
   }
 
-  const difference = roundCurrency(asNumber(currentValue) - asNumber(previousValue))
+  const difference = roundCurrency(
+    asNumber(currentValue) - asNumber(previousValue)
+  )
 
   if (difference === 0) {
     return 'Flat vs last month'
@@ -1104,9 +1127,7 @@ async function loadWorkspace() {
     workspace.value = getPreviewDashboardWorkspace(authState.role)
     selectedMonthKey.value = workspace.value.currentMonthKey
     loadError.value =
-      error instanceof Error
-        ? error.message
-        : 'Unable to load the dashboard.'
+      error instanceof Error ? error.message : 'Unable to load the dashboard.'
   } finally {
     isLoading.value = false
   }

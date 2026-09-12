@@ -2,10 +2,22 @@
   <q-layout view="hHh Lpr lFf" class="shell-layout">
     <q-header class="shell-header">
       <q-toolbar class="q-px-md q-py-sm q-px-lg-md">
-        <q-btn flat dense round icon="menu" color="brown-10" aria-label="Toggle navigation" @click="toggleLeftDrawer" />
+        <q-btn
+          flat
+          dense
+          round
+          icon="menu"
+          color="brown-10"
+          aria-label="Toggle navigation"
+          @click="toggleLeftDrawer"
+        />
 
         <div class="brand-lockup">
-          <img src="/src/assets/logo.png" class="brand-badge" alt="Beecone Honey" />
+          <img
+            src="/src/assets/logo.png"
+            class="brand-badge"
+            alt="Beecone Honey"
+          />
           <div>
             <div class="brand-kicker">Beecone Honey</div>
             <div class="brand-title">Operations Management System</div>
@@ -19,8 +31,13 @@
 
         <q-space />
 
-        <div class="topbar-user">
-          <q-chip square color="amber-2" text-color="brown-10" icon="verified_user">
+        <div class="topbar-user gt-sm">
+          <q-chip
+            square
+            color="amber-2"
+            text-color="brown-10"
+            icon="verified_user"
+          >
             {{ roleLabel }}
           </q-chip>
 
@@ -29,12 +46,26 @@
             <div class="topbar-user__email">{{ authState.user?.email }}</div>
           </div>
 
-          <q-btn flat color="primary" no-caps :loading="isSigningOut" label="Sign out" @click="handleSignOut" />
+          <q-btn
+            flat
+            color="primary"
+            no-caps
+            :loading="isSigningOut"
+            label="Sign out"
+            @click="handleSignOut"
+          />
         </div>
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered :width="280" class="shell-drawer">
+    <q-drawer
+      v-model="leftDrawerOpen"
+      :breakpoint="1024"
+      show-if-above
+      bordered
+      :width="280"
+      class="shell-drawer"
+    >
       <div class="drawer-summary">
         <div class="drawer-summary__label">Signed in as</div>
         <div class="drawer-summary__name">{{ userName }}</div>
@@ -46,8 +77,15 @@
           Workspaces
         </q-item-label>
 
-        <q-item v-for="item in navigationItems" :key="item.to" clickable :to="item.to" class="drawer-link"
-          active-class="drawer-link--active">
+        <q-item
+          v-for="item in navigationItems"
+          :key="item.to"
+          clickable
+          :to="item.to"
+          class="drawer-link"
+          active-class="drawer-link--active"
+          @click="leftDrawerOpen = false"
+        >
           <q-item-section avatar>
             <q-icon :name="item.icon" />
           </q-item-section>
@@ -58,16 +96,20 @@
           </q-item-section>
         </q-item>
       </q-list>
+      <q-btn
+        flat
+        no-caps
+        class="q-ma-md"
+        label="Sign out"
+        :loading="isSigningOut"
+        @click="handleSignOut"
+      />
 
       <div class="drawer-footer q-pa-md">
-        <q-banner v-if="!isSupabaseConfigured" class="bg-orange-1 text-dark rounded-borders">
-          Supabase env vars are missing. Add
-          <code>VITE_SUPABASE_URL</code> and
-          <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to enable live
-          authentication.
-        </q-banner>
-
-        <q-banner v-else-if="!authState.role" class="bg-amber-1 text-dark rounded-borders">
+        <q-banner
+          v-if="!authState.role"
+          class="bg-amber-1 text-dark rounded-borders"
+        >
           This account is authenticated, but it still needs a BOMS role
           assignment before restricted routes unlock.
         </q-banner>
@@ -84,7 +126,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getRoleLabel, hasAllowedRole } from '@/constants/roles'
-import { authState, isSupabaseConfigured, signOut } from '@/services/auth'
+import { authState, signOut } from '@/services/auth'
 
 const leftDrawerOpen = ref(false)
 const isSigningOut = ref(false)

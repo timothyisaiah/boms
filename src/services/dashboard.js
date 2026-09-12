@@ -1,5 +1,5 @@
 import { hasAllowedRole } from '@/constants/roles'
-import { isSupabaseConfigured, supabase } from '@/lib/supabase'
+import { apiRequest } from '@/lib/api'
 
 const SUPPLY_ROLES = [
   'admin_owner',
@@ -65,16 +65,14 @@ function roundCurrency(value) {
   return Math.round(asNumber(value) * 100) / 100
 }
 
-function clone(value) {
-  return JSON.parse(JSON.stringify(value))
-}
-
 function startOfMonth(date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
+  return new Date(`${toMonthKey(date)}-01T00:00:00Z`)
 }
 
 function shiftMonth(date, offset) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + offset, 1))
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + offset, 1)
+  )
 }
 
 function toMonthKey(value) {
@@ -88,7 +86,12 @@ function toMonthKey(value) {
     return null
   }
 
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Kampala',
+    year: 'numeric',
+    month: '2-digit'
+  }).formatToParts(date)
+  return `${parts.find(part => part.type === 'year').value}-${parts.find(part => part.type === 'month').value}`
 }
 
 function buildMonthTimeline(count = 6, referenceDate = new Date()) {
@@ -180,7 +183,12 @@ function mapRetailerWatchlist(balance) {
   }
 }
 
-function buildStockSections({ access, inventoryLots, productionOutputs, openIssueLines }) {
+function buildStockSections({
+  access,
+  inventoryLots,
+  productionOutputs,
+  openIssueLines
+}) {
   const sections = []
 
   if (access.supply && inventoryLots.length > 0) {
@@ -189,7 +197,10 @@ function buildStockSections({ access, inventoryLots, productionOutputs, openIssu
       title: 'Material lots',
       items: inventoryLots
         .slice()
-        .sort((left, right) => new Date(left.received_at) - new Date(right.received_at))
+        .sort(
+          (left, right) =>
+            new Date(left.received_at) - new Date(right.received_at)
+        )
         .slice(0, 4)
         .map(lot => ({
           id: lot.id,
@@ -208,7 +219,11 @@ function buildStockSections({ access, inventoryLots, productionOutputs, openIssu
       title: 'Warehouse stock',
       items: productionOutputs
         .slice()
-        .sort((left, right) => asNumber(right.quantity_remaining) - asNumber(left.quantity_remaining))
+        .sort(
+          (left, right) =>
+            asNumber(right.quantity_remaining) -
+            asNumber(left.quantity_remaining)
+        )
         .slice(0, 4)
         .map(output => ({
           id: output.id,
@@ -227,7 +242,10 @@ function buildStockSections({ access, inventoryLots, productionOutputs, openIssu
       title: 'Retail stock',
       items: openIssueLines
         .slice()
-        .sort((left, right) => asNumber(right.open_stock_value) - asNumber(left.open_stock_value))
+        .sort(
+          (left, right) =>
+            asNumber(right.open_stock_value) - asNumber(left.open_stock_value)
+        )
         .slice(0, 4)
         .map(line => ({
           id: line.stock_issue_item_id,
@@ -296,7 +314,8 @@ function buildActivityFeed({
       id: `remittance-${remittance.id}`,
       type: 'Cash',
       title:
-        remittance.remittance_reference?.trim() || `Remittance ${remittance.id}`,
+        remittance.remittance_reference?.trim() ||
+        `Remittance ${remittance.id}`,
       subtitle: remittance.retailer?.retailer_name ?? 'Retail partner',
       timestamp: remittance.received_at,
       value: asNumber(remittance.amount),
@@ -433,7 +452,8 @@ function buildLiveWorkspace({
     openMaterialLots: inventoryLots.length,
     openMaterialValue: roundCurrency(
       inventoryLots.reduce(
-        (total, lot) => total + asNumber(lot.quantity_remaining) * asNumber(lot.unit_cost),
+        (total, lot) =>
+          total + asNumber(lot.quantity_remaining) * asNumber(lot.unit_cost),
         0
       )
     ),
@@ -517,547 +537,31 @@ function buildLiveWorkspace({
   }
 }
 
-function throwIfError(error) {
-  if (error) {
-    throw error
-  }
-}
-
-const previewWorkspace = Object.freeze({
-  currentMonthKey: '2026-08',
-  months: [
-    {
-      key: '2026-03',
-      label: 'Mar 2026',
-      shortLabel: 'Mar',
-      purchasesAmount: 2180000,
-      purchasesCount: 2,
-      batchesCompleted: 1,
-      outputQuantity: 96,
-      stockIssueCount: 1,
-      issuedQuantity: 36,
-      salesValue: 224000,
-      cogsValue: 138400,
-      grossProfit: 85600,
-      remittedAmount: 180000,
-      expenseAmount: 145000,
-      netProfit: -59400,
-      soldQuantity: 8,
-      returnedQuantity: 0,
-      damagedQuantity: 0,
-      remainingQuantity: 28
-    },
-    {
-      key: '2026-04',
-      label: 'Apr 2026',
-      shortLabel: 'Apr',
-      purchasesAmount: 2640000,
-      purchasesCount: 2,
-      batchesCompleted: 2,
-      outputQuantity: 156,
-      stockIssueCount: 2,
-      issuedQuantity: 64,
-      salesValue: 448000,
-      cogsValue: 272000,
-      grossProfit: 176000,
-      remittedAmount: 310000,
-      expenseAmount: 212000,
-      netProfit: -36000,
-      soldQuantity: 16,
-      returnedQuantity: 1,
-      damagedQuantity: 1,
-      remainingQuantity: 46
-    },
-    {
-      key: '2026-05',
-      label: 'May 2026',
-      shortLabel: 'May',
-      purchasesAmount: 3115000,
-      purchasesCount: 3,
-      batchesCompleted: 2,
-      outputQuantity: 204,
-      stockIssueCount: 2,
-      issuedQuantity: 88,
-      salesValue: 616000,
-      cogsValue: 374200,
-      grossProfit: 241800,
-      remittedAmount: 402000,
-      expenseAmount: 228000,
-      netProfit: 13800,
-      soldQuantity: 22,
-      returnedQuantity: 2,
-      damagedQuantity: 1,
-      remainingQuantity: 63
-    },
-    {
-      key: '2026-06',
-      label: 'Jun 2026',
-      shortLabel: 'Jun',
-      purchasesAmount: 3380000,
-      purchasesCount: 3,
-      batchesCompleted: 3,
-      outputQuantity: 252,
-      stockIssueCount: 3,
-      issuedQuantity: 112,
-      salesValue: 812000,
-      cogsValue: 493800,
-      grossProfit: 318200,
-      remittedAmount: 590000,
-      expenseAmount: 274000,
-      netProfit: 44200,
-      soldQuantity: 29,
-      returnedQuantity: 2,
-      damagedQuantity: 2,
-      remainingQuantity: 79
-    },
-    {
-      key: '2026-07',
-      label: 'Jul 2026',
-      shortLabel: 'Jul',
-      purchasesAmount: 3570000,
-      purchasesCount: 3,
-      batchesCompleted: 3,
-      outputQuantity: 288,
-      stockIssueCount: 3,
-      issuedQuantity: 124,
-      salesValue: 1036000,
-      cogsValue: 628500,
-      grossProfit: 407500,
-      remittedAmount: 742000,
-      expenseAmount: 286000,
-      netProfit: 121500,
-      soldQuantity: 37,
-      returnedQuantity: 3,
-      damagedQuantity: 2,
-      remainingQuantity: 82
-    },
-    {
-      key: '2026-08',
-      label: 'Aug 2026',
-      shortLabel: 'Aug',
-      purchasesAmount: 3265000,
-      purchasesCount: 3,
-      batchesCompleted: 2,
-      outputQuantity: 264,
-      stockIssueCount: 2,
-      issuedQuantity: 96,
-      salesValue: 336000,
-      cogsValue: 202200,
-      grossProfit: 133800,
-      remittedAmount: 250000,
-      expenseAmount: 305000,
-      netProfit: -171200,
-      soldQuantity: 12,
-      returnedQuantity: 3,
-      damagedQuantity: 2,
-      remainingQuantity: 79
-    }
-  ],
-  snapshot: {
-    activeRetailers: 3,
-    openMaterialLots: 5,
-    openMaterialValue: 2915000,
-    openWarehouseQuantity: 264,
-    openWarehouseValue: 4488120,
-    openRetailQuantity: 79,
-    openRetailValue: 2052050,
-    outstandingAmount: 86000,
-    retailersWithOutstanding: 1
-  },
-  retailerWatchlist: [
-    {
-      id: 5001,
-      title: 'Ntinda Health Market',
-      subtitle: 'Ntinda, Kampala',
-      statusLabel: 'Collect',
-      statusTone: 'warning',
-      outstandingAmount: 86000,
-      remainingQuantity: 25,
-      remittedAmount: 250000,
-      recognizedSalesValue: 336000
-    },
-    {
-      id: 5002,
-      title: 'Entebbe Organics Corner',
-      subtitle: 'Entebbe Road, Wakiso',
-      statusLabel: 'In store',
-      statusTone: 'positive',
-      outstandingAmount: 0,
-      remainingQuantity: 54,
-      remittedAmount: 0,
-      recognizedSalesValue: 0
-    }
-  ],
-  stockSections: [
-    {
-      key: 'materials',
-      title: 'Material lots',
-      items: [
-        {
-          id: 30021,
-          title: 'LOT-HON-0801',
-          detail: 'Raw Honey',
-          meta: 'Kayunga Honey Cooperative • Aug 2026',
-          value: 148,
-          unit: 'kg'
-        },
-        {
-          id: 30022,
-          title: 'LOT-JAR-0730',
-          detail: '500g PET Jar',
-          meta: 'Kampala Pack House • Jul 2026',
-          value: 220,
-          unit: 'piece'
-        }
-      ]
-    },
-    {
-      key: 'warehouse',
-      title: 'Warehouse stock',
-      items: [
-        {
-          id: 7003,
-          title: 'PB-20260801-002',
-          detail: '500g Ginger Infused Jar',
-          meta: 'BEE-GIN-500 • 17,120 UGX each',
-          value: 144,
-          unit: 'jars'
-        },
-        {
-          id: 7001,
-          title: 'PB-20260729-001',
-          detail: '500g Classic Jar',
-          meta: 'BEE-RAW-500 • 16,850 UGX each',
-          value: 78,
-          unit: 'jars'
-        }
-      ]
-    },
-    {
-      key: 'retail',
-      title: 'Retail stock',
-      items: [
-        {
-          id: 8102,
-          title: 'Entebbe Organics Corner',
-          detail: '1kg Classic Jar • PB-20260731-001',
-          meta: 'DN-ENT-0002 • 1,630,800 UGX open',
-          value: 54,
-          unit: 'jars'
-        },
-        {
-          id: 8101,
-          title: 'Ntinda Health Market',
-          detail: '500g Classic Jar • PB-20260729-001',
-          meta: 'DN-NTI-0004 • 421,250 UGX open',
-          value: 25,
-          unit: 'jars'
-        }
-      ]
-    }
-  ],
-  activityFeed: [
-    {
-      id: 'expense-9802',
-      type: 'Expense',
-      title: 'Promoter stipend',
-      subtitle: 'Field Team',
-      timestamp: '2026-08-02T10:00:00.000Z',
-      value: 120000,
-      valueType: 'currency'
-    },
-    {
-      id: 'issue-8002',
-      type: 'Issue',
-      title: 'DN-ENT-0002',
-      subtitle: 'Entebbe Organics Corner',
-      timestamp: '2026-08-01T16:15:00.000Z',
-      value: 54,
-      valueType: 'quantity',
-      valueUnit: 'jars'
-    },
-    {
-      id: 'remittance-9701',
-      type: 'Cash',
-      title: 'MMT-772418',
-      subtitle: 'Ntinda Health Market',
-      timestamp: '2026-08-02T16:30:00.000Z',
-      value: 250000,
-      valueType: 'currency'
-    },
-    {
-      id: 'reconciliation-9501',
-      type: 'Review',
-      title: 'REC-NTI-20260802',
-      subtitle: 'Ntinda Health Market',
-      timestamp: '2026-08-02T15:00:00.000Z',
-      value: 336000,
-      valueType: 'currency'
-    }
-  ]
-})
-
 export function getPreviewDashboardWorkspace(role) {
   return {
-    mode: 'preview',
-    access: getDashboardAccess(role),
-    ...clone(previewWorkspace)
+    ...buildLiveWorkspace({
+      access: getDashboardAccess(role),
+      months: buildMonthTimeline(6),
+      purchases: [],
+      inventoryLots: [],
+      batches: [],
+      productionOutputs: [],
+      stockIssues: [],
+      retailers: [],
+      reconciliations: [],
+      remittances: [],
+      retailerBalances: [],
+      openIssueLines: [],
+      expenses: []
+    }),
+    mode: 'unavailable'
   }
 }
-
 export async function fetchDashboardWorkspace(role) {
-  if (!supabase || !isSupabaseConfigured) {
-    return getPreviewDashboardWorkspace(role)
-  }
-
-  const access = getDashboardAccess(role)
-  const months = buildMonthTimeline(6)
-  const startDate = `${months[0].key}-01T00:00:00.000Z`
-
-  const [
-    purchasesResult,
-    inventoryLotsResult,
-    batchesResult,
-    productionOutputsResult,
-    stockIssuesResult,
-    retailersResult,
-    reconciliationsResult,
-    remittancesResult,
-    retailerBalancesResult,
-    openIssueLinesResult,
-    expensesResult
-  ] = await Promise.all([
-    access.supply
-      ? supabase
-          .from('purchases')
-          .select(
-            `
-              id,
-              purchase_reference,
-              purchased_at,
-              status,
-              total_amount,
-              supplier:suppliers (
-                supplier_name
-              )
-            `
-          )
-          .gte('purchased_at', startDate)
-          .order('purchased_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    access.supply
-      ? supabase
-          .from('inventory_lots')
-          .select(
-            `
-              id,
-              lot_code,
-              quantity_remaining,
-              unit_cost,
-              received_at,
-              material:materials (
-                name,
-                unit_of_measure,
-                kind
-              ),
-              supplier:suppliers (
-                supplier_name
-              )
-            `
-          )
-          .eq('status', 'open')
-          .order('received_at', { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-    access.production
-      ? supabase
-          .from('production_batches')
-          .select(
-            `
-              id,
-              batch_code,
-              started_at,
-              status,
-              total_output_quantity,
-              variant:product_variants (
-                variant_name
-              )
-            `
-          )
-          .gte('started_at', startDate)
-          .order('started_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    access.production
-      ? supabase
-          .from('production_outputs')
-          .select(
-            `
-              id,
-              quantity_produced,
-              quantity_remaining,
-              unit_cost,
-              created_at,
-              batch:production_batches (
-                batch_code,
-                started_at
-              ),
-              variant:product_variants (
-                sku,
-                variant_name,
-                pack_size_grams,
-                flavor
-              )
-            `
-          )
-          .gt('quantity_remaining', 0)
-          .order('created_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    access.retail
-      ? supabase
-          .from('stock_issues')
-          .select(
-            `
-              id,
-              issue_reference,
-              issued_at,
-              status,
-              total_quantity,
-              total_cost,
-              retailer:retailers (
-                retailer_name
-              )
-            `
-          )
-          .gte('issued_at', startDate)
-          .order('issued_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    access.retail
-      ? supabase
-          .from('retailers')
-          .select(
-            `
-              id,
-              retailer_name,
-              delivery_location
-            `
-          )
-          .eq('is_active', true)
-          .order('retailer_name', { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-    access.review
-      ? supabase
-          .from('reconciliations')
-          .select(
-            `
-              id,
-              reconciliation_reference,
-              reconciled_at,
-              total_sold_quantity,
-              total_returned_quantity,
-              total_damaged_quantity,
-              total_remaining_quantity,
-              total_sales_value,
-              total_cogs_value,
-              retailer:retailers (
-                retailer_name
-              )
-            `
-          )
-          .gte('reconciled_at', startDate)
-          .order('reconciled_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    access.review
-      ? supabase
-          .from('remittances')
-          .select(
-            `
-              id,
-              amount,
-              remittance_reference,
-              received_at,
-              retailer:retailers (
-                retailer_name
-              )
-            `
-          )
-          .gte('received_at', startDate)
-          .order('received_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    access.review
-      ? supabase
-          .from('retailer_outstanding_balances')
-          .select(
-            `
-              retailer_id,
-              retailer_name,
-              delivery_location,
-              remaining_quantity,
-              recognized_sales_value,
-              remitted_amount,
-              outstanding_amount
-            `
-          )
-          .order('outstanding_amount', { ascending: false })
-          .order('retailer_name', { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-    access.review
-      ? supabase
-          .from('retailer_issue_open_balances')
-          .select(
-            `
-              retailer_name,
-              stock_issue_item_id,
-              issue_reference,
-              batch_code,
-              variant_name,
-              sku,
-              quantity_open,
-              open_stock_value
-            `
-          )
-          .order('open_stock_value', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    access.expenses
-      ? supabase
-          .from('expenses')
-          .select(
-            `
-              id,
-              expense_category,
-              incurred_at,
-              amount,
-              vendor_name
-            `
-          )
-          .gte('incurred_at', startDate)
-          .order('incurred_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null })
-  ])
-
-  throwIfError(purchasesResult.error)
-  throwIfError(inventoryLotsResult.error)
-  throwIfError(batchesResult.error)
-  throwIfError(productionOutputsResult.error)
-  throwIfError(stockIssuesResult.error)
-  throwIfError(retailersResult.error)
-  throwIfError(reconciliationsResult.error)
-  throwIfError(remittancesResult.error)
-  throwIfError(retailerBalancesResult.error)
-  throwIfError(openIssueLinesResult.error)
-  throwIfError(expensesResult.error)
-
+  const data = await apiRequest('workspace?name=dashboard')
   return buildLiveWorkspace({
-    access,
-    months,
-    purchases: purchasesResult.data ?? [],
-    inventoryLots: inventoryLotsResult.data ?? [],
-    batches: batchesResult.data ?? [],
-    productionOutputs: productionOutputsResult.data ?? [],
-    stockIssues: stockIssuesResult.data ?? [],
-    retailers: retailersResult.data ?? [],
-    reconciliations: reconciliationsResult.data ?? [],
-    remittances: remittancesResult.data ?? [],
-    retailerBalances: retailerBalancesResult.data ?? [],
-    openIssueLines: openIssueLinesResult.data ?? [],
-    expenses: expensesResult.data ?? []
+    ...data,
+    access: getDashboardAccess(role),
+    months: buildMonthTimeline(6)
   })
 }

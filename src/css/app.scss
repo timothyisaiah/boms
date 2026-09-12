@@ -540,7 +540,7 @@ code {
 
 .dashboard-trend-focus__value {
   margin-top: 0.35rem;
-  font-size: clamp(1.0rem, 3.1vw, 1.8rem);
+  font-size: clamp(1rem, 3.1vw, 1.8rem);
   line-height: 1;
   font-weight: 800;
   color: var(--boms-cocoa);
@@ -648,7 +648,11 @@ code {
   position: relative;
   height: 0.95rem;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(204, 139, 44, 0.08), rgba(204, 139, 44, 0.16));
+  background: linear-gradient(
+    90deg,
+    rgba(204, 139, 44, 0.08),
+    rgba(204, 139, 44, 0.16)
+  );
   overflow: hidden;
 }
 
@@ -996,5 +1000,129 @@ code {
 
   .dashboard-list__value {
     text-align: left;
+  }
+}
+
+/* Phone controls: one column, reachable actions, readable labels. */
+.q-btn {
+  min-height: 44px;
+}
+.q-btn--round {
+  min-width: 44px;
+  min-height: 44px;
+}
+.q-tab {
+  min-height: 48px;
+}
+.q-field__native,
+.q-field__input {
+  font-size: 16px;
+}
+.q-field__control {
+  min-height: 48px;
+}
+.q-chip {
+  max-width: 100%;
+  height: auto;
+  min-height: 32px;
+}
+.q-chip__content {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.list-card,
+.line-item-card,
+.surface-card,
+.inline-form-grid > *,
+.line-item-grid > * {
+  min-width: 0;
+}
+.detail-row,
+.dashboard-list__detail,
+.drawer-summary__email {
+  overflow-wrap: anywhere;
+}
+.form-footer > .q-btn {
+  width: 100%;
+}
+.report-cards {
+  display: grid;
+  gap: 12px;
+}
+.report-row {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e8dfd2;
+  border-radius: 14px;
+}
+.report-row__field {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.report-row__field span {
+  color: #665b50;
+}
+.report-row__field strong {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1023px) {
+  .shell-header .brand-title {
+    font-size: 13px;
+  }
+  .shell-header .brand-kicker {
+    font-size: 11px;
+  }
+  .shell-header .brand-badge {
+    width: 40px;
+    height: 40px;
+  }
+  .shell-header .brand-lockup {
+    margin-left: 8px;
+    gap: 8px;
+  }
+  .shell-header .q-toolbar {
+    padding: 4px 8px;
+  }
+  .operations-tab-panel {
+    padding: 14px;
+  }
+  .line-item-card {
+    padding: 12px;
+  }
+  .page-hero__actions {
+    width: 100%;
+  }
+  .page-hero__actions .q-btn {
+    flex: 1;
+  }
+  .auth-hero {
+    display: none;
+  }
+  .auth-shell {
+    min-height: auto;
+  }
+  .auth-card__header {
+    padding-top: 28px;
+  }
+  .form-footer {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 0;
+    background: #fffcf6;
+    z-index: 2;
+  }
+  .dashboard-trend-card {
+    order: 2;
+  }
+}
+@media (min-width: 1024px) {
+  .form-footer > .q-btn {
+    width: auto;
+  }
+  .report-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

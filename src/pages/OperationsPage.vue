@@ -10,6 +10,10 @@
       </div>
 
       <div class="page-hero__actions">
+        <VariantManager @saved="loadWorkspace" />
+        <MaterialManager @saved="loadWorkspace" />
+        <AddPartnerButton kind="supplier" @saved="supplierAdded" />
+        <PartnerProfiles kind="supplier" @saved="loadWorkspace" />
         <q-btn
           color="primary"
           no-caps
@@ -29,12 +33,11 @@
     </section>
 
     <q-banner
-      v-if="workspace.mode === 'preview'"
+      v-if="workspace.mode !== 'live'"
       rounded
       class="surface-card operations-banner bg-amber-1 text-brown-10"
     >
-      Preview mode is active. Connect Supabase and apply the hosted migrations
-      to unlock live purchasing and batching.
+      Live data is unavailable. Refresh when your connection is restored.
     </q-banner>
 
     <q-banner
@@ -103,7 +106,11 @@
           class="operations-tabs"
         >
           <q-tab name="snapshot" icon="insights" label="Snapshot" />
-          <q-tab name="purchase-entry" icon="receipt_long" label="Receipt form" />
+          <q-tab
+            name="purchase-entry"
+            icon="receipt_long"
+            label="Receipt form"
+          />
           <q-tab name="batch-entry" icon="science" label="Batch form" />
           <q-tab
             name="purchases"
@@ -128,7 +135,9 @@
             <section class="card-grid card-grid--two">
               <div class="operations-tab-block">
                 <div class="section-label">Reference deck</div>
-                <div class="section-title">Variants, materials, and suppliers</div>
+                <div class="section-title"
+                  >Variants, materials, and suppliers</div
+                >
 
                 <div class="operations-reference-grid q-mt-lg">
                   <div>
@@ -156,7 +165,8 @@
                         color="green-1"
                         text-color="green-10"
                       >
-                        {{ material.name }} / {{ formatMaterialKind(material.kind) }}
+                        {{ material.name }} /
+                        {{ formatMaterialKind(material.kind) }}
                       </q-chip>
                     </div>
                   </div>
@@ -182,14 +192,19 @@
                 <div class="section-label">Open material lots</div>
                 <div class="section-title">What production can consume now</div>
 
-                <div v-if="openInventoryLots.length > 0" class="list-stack q-mt-lg">
+                <div
+                  v-if="openInventoryLots.length > 0"
+                  class="list-stack q-mt-lg"
+                >
                   <article
                     v-for="lot in openInventoryLots"
                     :key="lot.id"
                     class="list-card"
                   >
                     <div class="detail-row">
-                      <strong>{{ lot.material?.name ?? 'Material lot' }}</strong>
+                      <strong>{{
+                        lot.material?.name ?? 'Material lot'
+                      }}</strong>
                       <q-chip square color="amber-2" text-color="brown-10">
                         {{ lot.lot_code }}
                       </q-chip>
@@ -209,7 +224,8 @@
                 </div>
 
                 <div v-else class="empty-state q-mt-lg">
-                  No open material lots yet. Record a receipt to stock production.
+                  No open material lots yet. Record a receipt to stock
+                  production.
                 </div>
               </div>
             </section>
@@ -218,10 +234,13 @@
           <q-tab-panel name="purchase-entry" class="operations-tab-panel">
             <div class="operations-tab-block">
               <div class="section-label">Purchasing workflow</div>
-              <div class="section-title">Receive honey and packaging into lots</div>
+              <div class="section-title"
+                >Receive honey and packaging into lots</div
+              >
 
               <div class="text-body2 text-grey-8 q-mt-sm">
-                Post receipts with lot codes so production can consume real stock.
+                Post receipts with lot codes so production can consume real
+                stock.
               </div>
 
               <q-banner
@@ -229,15 +248,21 @@
                 rounded
                 class="bg-grey-2 text-grey-9 q-mt-lg"
               >
-                Live purchase writes need a connected Supabase project with the
-                latest migrations.
+                Purchase entry is unavailable for this account or connection.
               </q-banner>
 
+              <WriteStatus
+                action="purchases"
+                @saved="onSaved(resetPurchaseForm)"
+              />
               <q-form class="q-mt-lg" @submit.prevent="submitPurchase">
                 <div class="inline-form-grid">
                   <q-select
                     v-model="purchaseForm.supplierId"
                     outlined
+                    behavior="dialog"
+                    lazy-rules
+                    :rules="[required]"
                     emit-value
                     map-options
                     :disable="
@@ -251,6 +276,8 @@
                     v-model="purchaseForm.purchasedOn"
                     outlined
                     type="date"
+                    lazy-rules
+                    :rules="[required]"
                     :disable="purchaseWritesDisabled"
                     label="Purchase date"
                   />
@@ -291,6 +318,7 @@
                         type="button"
                         color="negative"
                         icon="delete"
+                        aria-label="Remove line"
                         :disable="purchaseWritesDisabled"
                         @click="removePurchaseLine(item.key)"
                       />
@@ -300,6 +328,9 @@
                       <q-select
                         v-model="item.materialId"
                         outlined
+                        behavior="dialog"
+                        lazy-rules
+                        :rules="[required]"
                         emit-value
                         map-options
                         :disable="
@@ -313,6 +344,9 @@
                         v-model="item.quantity"
                         outlined
                         type="number"
+                        inputmode="decimal"
+                        lazy-rules
+                        :rules="[positive]"
                         min="0"
                         step="0.001"
                         :disable="purchaseWritesDisabled"
@@ -323,6 +357,9 @@
                         v-model="item.unitCost"
                         outlined
                         type="number"
+                        inputmode="decimal"
+                        lazy-rules
+                        :rules="[nonnegative]"
                         min="0"
                         step="0.01"
                         :disable="purchaseWritesDisabled"
@@ -374,7 +411,9 @@
           <q-tab-panel name="batch-entry" class="operations-tab-panel">
             <div class="operations-tab-block">
               <div class="section-label">Production workflow</div>
-              <div class="section-title">Consume lots and create finished output</div>
+              <div class="section-title"
+                >Consume lots and create finished output</div
+              >
 
               <div class="text-body2 text-grey-8 q-mt-sm">
                 Create a batch from open lots and keep cost per jar traceable.
@@ -389,14 +428,23 @@
                 at least one purchase receipt first.
               </q-banner>
 
+              <WriteStatus
+                action="production"
+                @saved="onSaved(resetBatchForm)"
+              />
               <q-form class="q-mt-lg" @submit.prevent="submitProductionBatch">
                 <div class="inline-form-grid">
                   <q-select
                     v-model="batchForm.variantId"
                     outlined
+                    behavior="dialog"
+                    lazy-rules
+                    :rules="[required]"
                     emit-value
                     map-options
-                    :disable="batchWritesDisabled || variantOptions.length === 0"
+                    :disable="
+                      batchWritesDisabled || variantOptions.length === 0
+                    "
                     :options="variantOptions"
                     label="Finished variant"
                   />
@@ -405,6 +453,8 @@
                     v-model="batchForm.startedOn"
                     outlined
                     type="date"
+                    lazy-rules
+                    :rules="[required]"
                     :disable="batchWritesDisabled"
                     label="Batch date"
                   />
@@ -412,6 +462,8 @@
                   <q-input
                     v-model="batchForm.batchCode"
                     outlined
+                    lazy-rules
+                    :rules="[required]"
                     :disable="batchWritesDisabled"
                     label="Batch code"
                     hint="Auto-suggested and incremented by date"
@@ -421,6 +473,9 @@
                     v-model="batchForm.outputQuantity"
                     outlined
                     type="number"
+                    inputmode="numeric"
+                    lazy-rules
+                    :rules="[positive, whole]"
                     min="1"
                     step="1"
                     :disable="batchWritesDisabled"
@@ -437,6 +492,33 @@
                   />
                 </div>
 
+                <q-input
+                  class="q-mt-md"
+                  v-model="batchForm.expiresAt"
+                  outlined
+                  type="date"
+                  label="Batch expiry date"
+                  hint="Use the actual batch expiry; leave blank only if not yet known."
+                  :disable="batchWritesDisabled"
+                />
+                <q-banner
+                  v-if="matchingRecipe"
+                  class="q-mt-md bg-green-1 text-green-10"
+                  rounded
+                >
+                  Recipe: {{ matchingRecipe.name }}. Check and edit the actual
+                  quantities below.
+                  <template #action
+                    ><q-btn
+                      no-caps
+                      flat
+                      label="Apply recipe quantities"
+                      :disable="
+                        batchWritesDisabled || !Number(batchForm.outputQuantity)
+                      "
+                      @click="applyRecipe"
+                  /></template>
+                </q-banner>
                 <div class="operations-subheading q-mt-lg">Consumed inputs</div>
 
                 <div class="line-item-stack q-mt-sm">
@@ -455,6 +537,7 @@
                         type="button"
                         color="negative"
                         icon="delete"
+                        aria-label="Remove line"
                         :disable="batchWritesDisabled"
                         @click="removeBatchInput(input.key)"
                       />
@@ -464,10 +547,14 @@
                       <q-select
                         v-model="input.inventoryLotId"
                         outlined
+                        behavior="dialog"
+                        lazy-rules
+                        :rules="[required]"
                         emit-value
                         map-options
                         :disable="
-                          batchWritesDisabled || inventoryLotOptions.length === 0
+                          batchWritesDisabled ||
+                          inventoryLotOptions.length === 0
                         "
                         :options="inventoryLotOptions"
                         label="Material lot"
@@ -477,6 +564,9 @@
                         v-model="input.quantity"
                         outlined
                         type="number"
+                        inputmode="decimal"
+                        lazy-rules
+                        :rules="[positive]"
                         min="0"
                         step="0.001"
                         :disable="batchWritesDisabled"
@@ -489,8 +579,8 @@
                       class="text-caption text-grey-7 q-mt-sm"
                     >
                       {{
-                        resolveInventoryLot(input.inventoryLotId).material?.name ??
-                        'Material'
+                        resolveInventoryLot(input.inventoryLotId).material
+                          ?.name ?? 'Material'
                       }}
                       /
                       {{
@@ -570,7 +660,8 @@
                   </div>
 
                   <div class="text-body2 text-grey-8 q-mt-sm">
-                    {{ purchase.supplier?.supplier_name ?? 'Unknown supplier' }} /
+                    {{ purchase.supplier?.supplier_name ?? 'Unknown supplier' }}
+                    /
                     {{ formatDate(purchase.purchased_at) }}
                   </div>
 
@@ -601,7 +692,10 @@
               <div class="section-label">Recent production batches</div>
               <div class="section-title">Traceable outputs with unit cost</div>
 
-              <div v-if="workspace.batches.length > 0" class="list-stack q-mt-lg">
+              <div
+                v-if="workspace.batches.length > 0"
+                class="list-stack q-mt-lg"
+              >
                 <article
                   v-for="batch in workspace.batches"
                   :key="batch.id"
@@ -648,6 +742,15 @@
 </template>
 
 <script setup>
+import VariantManager from '@/components/VariantManager.vue'
+import MaterialManager from '@/components/MaterialManager.vue'
+import AddPartnerButton from '@/components/AddPartnerButton.vue'
+import PartnerProfiles from '@/components/PartnerProfiles.vue'
+import { authState } from '@/services/auth'
+import { recipeQuantity } from '@/lib/recipes'
+import WriteStatus from '@/components/WriteStatus.vue'
+import { isWriteLocked } from '@/services/writes'
+import { required, positive, nonnegative, whole } from '@/lib/validation'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import {
@@ -666,7 +769,7 @@ function createLineKey(prefix) {
 }
 
 function getTodayString() {
-  return new Date().toISOString().slice(0, 10)
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Kampala' })
 }
 
 function formatBatchDateStamp(dateValue = getTodayString()) {
@@ -757,6 +860,7 @@ const batchForm = reactive({
   batchCode: createBatchCode(),
   outputQuantity: '',
   notes: '',
+  expiresAt: '',
   inputs: [createBatchInput()]
 })
 
@@ -787,14 +891,18 @@ const openInventoryLots = computed(() =>
   )
 )
 
-const inventoryLotOptions = computed(() =>
-  openInventoryLots.value.map(lot => ({
+const inventoryLotOptions = computed(() => [
+  ...workspace.value.materials.map(material => ({
+    label: `${material.name} / oldest available lots (FIFO)`,
+    value: `fifo:${material.id}`
+  })),
+  ...openInventoryLots.value.map(lot => ({
     label: `${lot.lot_code} / ${lot.material?.name ?? 'Material'} / ${formatQuantity(
       lot.quantity_remaining
     )} ${lot.material?.unit_of_measure ?? 'units'} left`,
     value: lot.id
   }))
-)
+])
 
 const actionFeedbackClass = computed(() => {
   switch (actionFeedback.value.type) {
@@ -859,9 +967,24 @@ const estimatedBatchUnitCost = computed(() => {
   return estimatedBatchInputCost.value / outputQuantity
 })
 
-const purchaseWritesDisabled = computed(() => workspace.value.mode !== 'live')
+const purchaseWritesDisabled = computed(
+  () =>
+    workspace.value.mode !== 'live' ||
+    isSubmittingPurchase.value ||
+    isWriteLocked('purchases') ||
+    !['admin_owner', 'operations_manager', 'warehouse_staff'].includes(
+      authState.role
+    )
+)
 const batchWritesDisabled = computed(
-  () => workspace.value.mode !== 'live' || openInventoryLots.value.length === 0
+  () =>
+    workspace.value.mode !== 'live' ||
+    isSubmittingBatch.value ||
+    isWriteLocked('production') ||
+    !['admin_owner', 'operations_manager', 'production_staff'].includes(
+      authState.role
+    ) ||
+    openInventoryLots.value.length === 0
 )
 
 function formatMoney(value) {
@@ -889,7 +1012,16 @@ function formatQuantity(value) {
 }
 
 function formatMaterialKind(value) {
-  return value === 'raw_honey' ? 'Raw honey' : 'Packaging'
+  switch (value) {
+    case 'raw_honey':
+      return 'Raw honey'
+
+    case 'spice':
+      return 'Spice'
+
+    default:
+      return 'Packaging'
+  }
 }
 
 function formatSupplierKind(value) {
@@ -899,6 +1031,9 @@ function formatSupplierKind(value) {
 
     case 'packaging':
       return 'Packaging'
+
+    case 'spice':
+      return 'Spice'
 
     default:
       return 'Mixed'
@@ -910,7 +1045,13 @@ function purchaseLabel(purchase) {
 }
 
 function resolveInventoryLot(lotId) {
-  return openInventoryLots.value.find(lot => lot.id === lotId) ?? null
+  return (
+    openInventoryLots.value.find(lot =>
+      String(lotId).startsWith('fifo:')
+        ? String(lot.material?.id) === String(lotId).slice(5)
+        : lot.id === lotId
+    ) ?? null
+  )
 }
 
 function suggestNextBatchCode(dateValue = batchForm.startedOn) {
@@ -1002,6 +1143,7 @@ function resetBatchForm() {
   batchForm.startedOn = getTodayString()
   batchForm.batchCode = createBatchCode(batchForm.startedOn)
   batchForm.outputQuantity = ''
+  batchForm.expiresAt = ''
   batchForm.notes = ''
   resetArray(batchForm.inputs, [createBatchInput()])
   syncSuggestedBatchCode({ force: true })
@@ -1046,6 +1188,16 @@ function findDuplicateLotCode(items) {
   }
 
   return null
+}
+
+async function onSaved(resetForm) {
+  resetForm()
+  await loadWorkspace()
+}
+
+async function supplierAdded(result) {
+  await loadWorkspace()
+  purchaseForm.supplierId = result.id
 }
 
 async function loadWorkspace() {
@@ -1147,7 +1299,12 @@ async function submitProductionBatch() {
   clearActionFeedback()
 
   const normalizedInputs = batchForm.inputs.map(input => ({
-    inventory_lot_id: input.inventoryLotId,
+    inventory_lot_id: String(input.inventoryLotId).startsWith('fifo:')
+      ? null
+      : input.inventoryLotId,
+    material_id: String(input.inventoryLotId).startsWith('fifo:')
+      ? Number(String(input.inventoryLotId).slice(5))
+      : null,
     quantity: input.quantity === '' ? Number.NaN : asNumber(input.quantity, NaN)
   }))
 
@@ -1192,7 +1349,7 @@ async function submitProductionBatch() {
   if (
     normalizedInputs.some(
       input =>
-        !input.inventory_lot_id ||
+        (!input.inventory_lot_id && !input.material_id) ||
         !Number.isFinite(input.quantity) ||
         input.quantity <= 0
     )
@@ -1207,6 +1364,7 @@ async function submitProductionBatch() {
   const requestedQuantityByLot = new Map()
 
   for (const input of normalizedInputs) {
+    if (!input.inventory_lot_id) continue
     requestedQuantityByLot.set(
       input.inventory_lot_id,
       (requestedQuantityByLot.get(input.inventory_lot_id) ?? 0) + input.quantity
@@ -1242,6 +1400,7 @@ async function submitProductionBatch() {
       startedAt: toIsoTimestamp(batchForm.startedOn),
       notes: batchForm.notes,
       outputQuantity,
+      expiresAt: batchForm.expiresAt || null,
       inputs: normalizedInputs
     })
 
@@ -1261,6 +1420,35 @@ async function submitProductionBatch() {
     isSubmittingBatch.value = false
   }
 }
+
+const matchingRecipe = computed(() =>
+  (workspace.value.recipes ?? []).find(
+    recipe => recipe.variant_id === batchForm.variantId
+  )
+)
+let lastRecipeDefaults = ''
+function applyRecipe() {
+  if (!matchingRecipe.value || !Number(batchForm.outputQuantity)) return
+  resetArray(
+    batchForm.inputs,
+    matchingRecipe.value.items.map(item => ({
+      key: createLineKey('batch'),
+      inventoryLotId: 'fifo:' + item.material_id,
+      quantity: recipeQuantity(item.quantity_per_unit, batchForm.outputQuantity)
+    }))
+  )
+  lastRecipeDefaults = JSON.stringify(batchForm.inputs)
+}
+watch(
+  () => [batchForm.variantId, batchForm.outputQuantity],
+  () => {
+    if (
+      batchForm.inputs.every(input => input.quantity === '') ||
+      JSON.stringify(batchForm.inputs) === lastRecipeDefaults
+    )
+      applyRecipe()
+  }
+)
 
 onMounted(() => {
   void loadWorkspace()

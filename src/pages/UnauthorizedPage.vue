@@ -8,7 +8,7 @@
         >
         <p class="text-body1 text-grey-8 q-mt-sm">
           Your account does not currently include the role required for this
-          route. Ask a Beecone admin to review your role assignment in Supabase.
+          route. Ask a Beecone admin to review your role assignment.
         </p>
       </q-card-section>
 

@@ -11,6 +11,8 @@
       </div>
 
       <div class="page-hero__actions">
+        <AddPartnerButton kind="retailer" @saved="retailerAdded" />
+        <PartnerProfiles kind="retailer" @saved="loadWorkspace" />
         <q-btn
           color="primary"
           no-caps
@@ -30,12 +32,11 @@
     </section>
 
     <q-banner
-      v-if="workspace.mode === 'preview'"
+      v-if="workspace.mode !== 'live'"
       rounded
       class="surface-card operations-banner bg-amber-1 text-brown-10"
     >
-      Preview mode is active. Connect Supabase and apply the latest hosted
-      migration to unlock live dispatch and ledger writes.
+      Live data is unavailable. Refresh when your connection is restored.
     </q-banner>
 
     <q-banner
@@ -119,9 +120,14 @@
             <section class="card-grid card-grid--two">
               <div class="operations-tab-block">
                 <div class="section-label">Warehouse stock</div>
-                <div class="section-title">Finished jars available by batch</div>
+                <div class="section-title"
+                  >Finished jars available by batch</div
+                >
 
-                <div v-if="openFinishedStock.length > 0" class="list-stack q-mt-lg">
+                <div
+                  v-if="openFinishedStock.length > 0"
+                  class="list-stack q-mt-lg"
+                >
                   <article
                     v-for="stock in openFinishedStock"
                     :key="stock.id"
@@ -159,9 +165,14 @@
 
               <div class="operations-tab-block">
                 <div class="section-label">Retail stock view</div>
-                <div class="section-title">What each partner is currently holding</div>
+                <div class="section-title"
+                  >What each partner is currently holding</div
+                >
 
-                <div v-if="retailerBalances.length > 0" class="list-stack q-mt-lg">
+                <div
+                  v-if="retailerBalances.length > 0"
+                  class="list-stack q-mt-lg"
+                >
                   <article
                     v-for="balance in retailerBalances"
                     :key="balance.retailerId"
@@ -181,7 +192,9 @@
                     </div>
 
                     <div class="text-body2 text-grey-8 q-mt-sm">
-                      {{ balance.deliveryLocation || 'Delivery location pending' }}
+                      {{
+                        balance.deliveryLocation || 'Delivery location pending'
+                      }}
                     </div>
 
                     <div
@@ -207,8 +220,8 @@
                 </div>
 
                 <div v-else class="empty-state q-mt-lg">
-                  Retail balances will appear here after the first stock issue is
-                  posted to a partner.
+                  Retail balances will appear here after the first stock issue
+                  is posted to a partner.
                 </div>
               </div>
             </section>
@@ -232,14 +245,23 @@
                 {{ issueWriteMessage }}
               </q-banner>
 
+              <WriteStatus
+                action="stock-issues"
+                @saved="onSaved(resetIssueForm)"
+              />
               <q-form class="q-mt-lg" @submit.prevent="submitStockIssue">
                 <div class="inline-form-grid">
                   <q-select
                     v-model="issueForm.retailerId"
                     outlined
+                    behavior="dialog"
+                    lazy-rules
+                    :rules="[required]"
                     emit-value
                     map-options
-                    :disable="issueWritesDisabled || retailerOptions.length === 0"
+                    :disable="
+                      issueWritesDisabled || retailerOptions.length === 0
+                    "
                     :options="retailerOptions"
                     label="Retail partner"
                   />
@@ -248,6 +270,8 @@
                     v-model="issueForm.issuedOn"
                     outlined
                     type="date"
+                    lazy-rules
+                    :rules="[required]"
                     :disable="issueWritesDisabled"
                     label="Issue date"
                   />
@@ -288,6 +312,7 @@
                         type="button"
                         color="negative"
                         icon="delete"
+                        aria-label="Remove line"
                         :disable="issueWritesDisabled"
                         @click="removeIssueLine(item.key)"
                       />
@@ -297,10 +322,14 @@
                       <q-select
                         v-model="item.productionOutputId"
                         outlined
+                        behavior="dialog"
+                        lazy-rules
+                        :rules="[required]"
                         emit-value
                         map-options
                         :disable="
-                          issueWritesDisabled || finishedStockOptions.length === 0
+                          issueWritesDisabled ||
+                          finishedStockOptions.length === 0
                         "
                         :options="finishedStockOptions"
                         label="Finished batch"
@@ -310,6 +339,9 @@
                         v-model="item.quantity"
                         outlined
                         type="number"
+                        inputmode="numeric"
+                        lazy-rules
+                        :rules="[positive, whole]"
                         min="1"
                         step="1"
                         :disable="issueWritesDisabled"
@@ -340,7 +372,8 @@
                       jars currently open at
                       {{
                         formatMoney(
-                          resolveFinishedStock(item.productionOutputId).unit_cost
+                          resolveFinishedStock(item.productionOutputId)
+                            .unit_cost
                         )
                       }}
                     </div>
@@ -418,8 +451,8 @@
               </div>
 
               <div v-else class="empty-state q-mt-lg">
-                Retail movement history will start once warehouse stock is issued
-                to a partner.
+                Retail movement history will start once warehouse stock is
+                issued to a partner.
               </div>
             </div>
           </q-tab-panel>
@@ -480,6 +513,11 @@
 </template>
 
 <script setup>
+import AddPartnerButton from '@/components/AddPartnerButton.vue'
+import PartnerProfiles from '@/components/PartnerProfiles.vue'
+import WriteStatus from '@/components/WriteStatus.vue'
+import { isWriteLocked } from '@/services/writes'
+import { required, positive, nonnegative, whole } from '@/lib/validation'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { hasAllowedRole } from '@/constants/roles'
@@ -499,7 +537,7 @@ function createLineKey(prefix) {
 }
 
 function getTodayString() {
-  return new Date().toISOString().slice(0, 10)
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Kampala' })
 }
 
 function createIssueLine() {
@@ -599,6 +637,8 @@ const estimatedIssueCost = computed(() =>
 const issueWritesDisabled = computed(
   () =>
     workspace.value.mode !== 'live' ||
+    isSubmittingIssue.value ||
+    isWriteLocked('stock-issues') ||
     !canIssueStock.value ||
     workspace.value.retailers.length === 0 ||
     openFinishedStock.value.length === 0
@@ -606,7 +646,7 @@ const issueWritesDisabled = computed(
 
 const issueWriteMessage = computed(() => {
   if (workspace.value.mode !== 'live') {
-    return 'Live stock issue writes are disabled until the app is connected to a Supabase project with the phase 3 migration applied.'
+    return 'Live entry is unavailable. Refresh the workspace to reconnect.'
   }
 
   if (!canIssueStock.value) {
@@ -808,6 +848,16 @@ function resetIssueForm() {
   issueForm.issueReference = ''
   issueForm.notes = ''
   resetArray(issueForm.items, [createIssueLine()])
+}
+
+async function onSaved(resetForm) {
+  resetForm()
+  await loadWorkspace()
+}
+
+async function retailerAdded(result) {
+  await loadWorkspace()
+  issueForm.retailerId = result.id
 }
 
 async function loadWorkspace() {

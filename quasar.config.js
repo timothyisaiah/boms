@@ -68,7 +68,8 @@ export default defineConfig(ctx => {
     devServer: {
       // vueDevtools: true,
       // https: true,
-      open: true // opens browser window automatically
+      open: false,
+      proxy: { '/api': { target: 'http://127.0.0.1:3001' } }
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework

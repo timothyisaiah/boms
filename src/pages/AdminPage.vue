@@ -5,27 +5,28 @@
         <p class="page-hero__eyebrow">Admin</p>
         <h1 class="page-hero__title">Access and settings</h1>
         <p class="page-hero__body">
-          Review environment status and current role assignments.
+          Add staff accounts, manage access, and configure your catalogue.
         </p>
       </div>
     </section>
 
+    <UserManagement />
     <section class="card-grid card-grid--two">
       <q-card flat class="surface-card">
         <q-card-section>
           <div class="section-label">Environment</div>
-          <div class="section-title">Supabase status</div>
+          <div class="section-title">Session status</div>
         </q-card-section>
 
         <q-card-section class="detail-list">
           <div class="detail-row">
-            <span>Supabase keys configured</span>
+            <span>Authenticated session</span>
             <q-chip
               square
-              :color="isSupabaseConfigured ? 'positive' : 'negative'"
+              :color="authState.session ? 'positive' : 'negative'"
               text-color="white"
             >
-              {{ isSupabaseConfigured ? 'Ready' : 'Missing' }}
+              {{ authState.session ? 'Active' : 'Missing' }}
             </q-chip>
           </div>
 
@@ -35,7 +36,7 @@
           </div>
 
           <div class="detail-row">
-            <span>Profile row synced</span>
+            <span>User account loaded</span>
             <q-chip
               square
               :color="authState.profile ? 'positive' : 'warning'"
@@ -75,13 +76,16 @@
         </q-list>
       </q-card>
     </section>
+    <CatalogueSettings />
   </q-page>
 </template>
 
 <script setup>
+import CatalogueSettings from '@/components/CatalogueSettings.vue'
+import UserManagement from '@/components/UserManagement.vue'
 import { computed } from 'vue'
 import { ROLE_OPTIONS, getRoleLabel } from '@/constants/roles'
-import { authState, isSupabaseConfigured } from '@/services/auth'
+import { authState } from '@/services/auth'
 
 const roles = ROLE_OPTIONS
 const roleLabel = computed(() => getRoleLabel(authState.role))

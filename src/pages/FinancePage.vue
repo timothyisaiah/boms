@@ -30,12 +30,11 @@
     </section>
 
     <q-banner
-      v-if="workspace.mode === 'preview'"
+      v-if="workspace.mode !== 'live'"
       rounded
       class="surface-card operations-banner bg-amber-1 text-brown-10"
     >
-      Preview mode is active. Connect Supabase and apply the latest hosted
-      migration to unlock live reconciliations, remittances, and expenses.
+      Live data is unavailable. Refresh when your connection is restored.
     </q-banner>
 
     <q-banner
@@ -100,11 +99,7 @@
             icon="fact_check"
             label="Reconciliation"
           />
-          <q-tab
-            name="remittance-entry"
-            icon="payments"
-            label="Remittance"
-          />
+          <q-tab name="remittance-entry" icon="payments" label="Remittance" />
           <q-tab name="expense-entry" icon="receipt_long" label="Expense" />
           <q-tab
             name="records"
@@ -149,7 +144,9 @@
                     </div>
 
                     <div class="text-body2 text-grey-8 q-mt-sm">
-                      {{ balance.delivery_location || 'Delivery location pending' }}
+                      {{
+                        balance.delivery_location || 'Delivery location pending'
+                      }}
                     </div>
 
                     <div class="summary-pill-row q-mt-sm">
@@ -157,13 +154,15 @@
                         Sold: {{ formatQuantity(balance.sold_quantity) }}
                       </q-chip>
                       <q-chip square color="grey-2" text-color="grey-9">
-                        Returned: {{ formatQuantity(balance.returned_quantity) }}
+                        Returned:
+                        {{ formatQuantity(balance.returned_quantity) }}
                       </q-chip>
                       <q-chip square color="grey-2" text-color="grey-9">
                         Damaged: {{ formatQuantity(balance.damaged_quantity) }}
                       </q-chip>
                       <q-chip square color="grey-2" text-color="grey-9">
-                        Remaining: {{ formatQuantity(balance.remaining_quantity) }}
+                        Remaining:
+                        {{ formatQuantity(balance.remaining_quantity) }}
                       </q-chip>
                     </div>
 
@@ -185,8 +184,9 @@
                     </div>
 
                     <div class="text-caption text-grey-7 q-mt-sm">
-                      Last reconciled {{ formatDate(balance.last_reconciled_at) }}
-                      / Last remitted {{ formatDate(balance.last_remitted_at) }}
+                      Last reconciled
+                      {{ formatDate(balance.last_reconciled_at) }} / Last
+                      remitted {{ formatDate(balance.last_remitted_at) }}
                     </div>
                   </article>
                 </div>
@@ -199,32 +199,59 @@
 
               <div class="operations-tab-block">
                 <div class="section-label">Gross profit view</div>
-                <div class="section-title">How the current picture is built</div>
+                <div class="section-title"
+                  >How the current picture is built</div
+                >
 
                 <div class="detail-list q-mt-lg">
                   <div class="detail-row">
                     <span>Issued to retailers</span>
-                    <strong>{{ formatQuantity(profitSummary.issued_quantity) }} jars</strong>
+                    <strong
+                      >{{
+                        formatQuantity(profitSummary.issued_quantity)
+                      }}
+                      jars</strong
+                    >
                   </div>
 
                   <div class="detail-row">
                     <span>Sold through reconciliation</span>
-                    <strong>{{ formatQuantity(profitSummary.sold_quantity) }} jars</strong>
+                    <strong
+                      >{{
+                        formatQuantity(profitSummary.sold_quantity)
+                      }}
+                      jars</strong
+                    >
                   </div>
 
                   <div class="detail-row">
                     <span>Returned to warehouse</span>
-                    <strong>{{ formatQuantity(profitSummary.returned_quantity) }} jars</strong>
+                    <strong
+                      >{{
+                        formatQuantity(profitSummary.returned_quantity)
+                      }}
+                      jars</strong
+                    >
                   </div>
 
                   <div class="detail-row">
                     <span>Damaged at retailer</span>
-                    <strong>{{ formatQuantity(profitSummary.damaged_quantity) }} jars</strong>
+                    <strong
+                      >{{
+                        formatQuantity(profitSummary.damaged_quantity)
+                      }}
+                      jars</strong
+                    >
                   </div>
 
                   <div class="detail-row">
                     <span>Still at retailers</span>
-                    <strong>{{ formatQuantity(profitSummary.remaining_quantity) }} jars</strong>
+                    <strong
+                      >{{
+                        formatQuantity(profitSummary.remaining_quantity)
+                      }}
+                      jars</strong
+                    >
                   </div>
 
                   <div class="detail-row">
@@ -243,7 +270,9 @@
 
                   <div class="detail-row">
                     <span>Gross profit</span>
-                    <strong>{{ formatMoney(profitSummary.gross_profit) }}</strong>
+                    <strong>{{
+                      formatMoney(profitSummary.gross_profit)
+                    }}</strong>
                   </div>
 
                   <div class="detail-row">
@@ -257,7 +286,9 @@
                     <span>Net result</span>
                     <q-chip
                       square
-                      :color="profitSummary.net_profit >= 0 ? 'green-1' : 'red-1'"
+                      :color="
+                        profitSummary.net_profit >= 0 ? 'green-1' : 'red-1'
+                      "
                       :text-color="
                         profitSummary.net_profit >= 0 ? 'green-10' : 'red-10'
                       "
@@ -268,7 +299,9 @@
 
                   <div class="detail-row">
                     <span>Remitted so far</span>
-                    <strong>{{ formatMoney(profitSummary.remitted_amount) }}</strong>
+                    <strong>{{
+                      formatMoney(profitSummary.remitted_amount)
+                    }}</strong>
                   </div>
 
                   <div class="detail-row">
@@ -282,13 +315,12 @@
             </section>
           </q-tab-panel>
 
-          <q-tab-panel
-            name="reconciliation-entry"
-            class="operations-tab-panel"
-          >
+          <q-tab-panel name="reconciliation-entry" class="operations-tab-panel">
             <div class="operations-tab-block">
               <div class="section-label">Reconciliation workflow</div>
-              <div class="section-title">Explain what happened to retailer stock</div>
+              <div class="section-title"
+                >Explain what happened to retailer stock</div
+              >
 
               <div class="text-body2 text-grey-8 q-mt-sm">
                 Count sold, returned, damaged, and remaining jars against each
@@ -303,11 +335,18 @@
                 {{ reconciliationWriteMessage }}
               </q-banner>
 
+              <WriteStatus
+                action="reconciliations"
+                @saved="onSaved(resetReconciliationForm)"
+              />
               <q-form class="q-mt-lg" @submit.prevent="submitReconciliation">
                 <div class="inline-form-grid">
                   <q-select
                     v-model="reconciliationForm.retailerId"
                     outlined
+                    behavior="dialog"
+                    lazy-rules
+                    :rules="[required]"
                     emit-value
                     map-options
                     :disable="
@@ -322,6 +361,8 @@
                     v-model="reconciliationForm.reconciledOn"
                     outlined
                     type="date"
+                    lazy-rules
+                    :rules="[required]"
                     :disable="reconciliationWritesDisabled"
                     label="Reconciliation date"
                   />
@@ -362,6 +403,7 @@
                         type="button"
                         color="negative"
                         icon="delete"
+                        aria-label="Remove line"
                         :disable="reconciliationWritesDisabled"
                         @click="removeReconciliationLine(item.key)"
                       />
@@ -371,6 +413,9 @@
                       <q-select
                         v-model="item.stockIssueItemId"
                         outlined
+                        behavior="dialog"
+                        lazy-rules
+                        :rules="[required]"
                         emit-value
                         map-options
                         :disable="
@@ -383,13 +428,15 @@
                       />
 
                       <q-input
-                        v-model="item.unitPrice"
+                        :model-value="
+                          priceForLine(item) == null
+                            ? 'Price not set for this date'
+                            : formatMoney(priceForLine(item))
+                        "
                         outlined
-                        type="number"
-                        min="0"
-                        step="100"
-                        :disable="reconciliationWritesDisabled"
-                        label="Selling price per jar"
+                        readonly
+                        label="Variant price on reconciliation date"
+                        hint="Only sold jars create a payment obligation."
                       />
                     </div>
 
@@ -398,6 +445,9 @@
                         v-model="item.quantitySold"
                         outlined
                         type="number"
+                        inputmode="numeric"
+                        lazy-rules
+                        :rules="[nonnegative, whole]"
                         min="0"
                         step="1"
                         :disable="reconciliationWritesDisabled"
@@ -408,6 +458,9 @@
                         v-model="item.quantityReturned"
                         outlined
                         type="number"
+                        inputmode="numeric"
+                        lazy-rules
+                        :rules="[v => v === '' || nonnegative(v), whole]"
                         min="0"
                         step="1"
                         :disable="reconciliationWritesDisabled"
@@ -418,16 +471,49 @@
                         v-model="item.quantityDamaged"
                         outlined
                         type="number"
+                        inputmode="numeric"
+                        lazy-rules
+                        :rules="[v => v === '' || nonnegative(v), whole]"
                         min="0"
                         step="1"
                         :disable="reconciliationWritesDisabled"
                         label="Damaged"
+                      />
+                      <q-input
+                        v-model="item.quantityExpired"
+                        outlined
+                        type="number"
+                        inputmode="numeric"
+                        min="0"
+                        step="1"
+                        lazy-rules
+                        :rules="[v => v === '' || nonnegative(v), whole]"
+                        :disable="reconciliationWritesDisabled"
+                        label="Expired"
+                      />
+                      <q-input
+                        v-model="item.returnReason"
+                        outlined
+                        :disable="reconciliationWritesDisabled"
+                        label="Return / loss reason"
+                        :rules="[
+                          v =>
+                            !(
+                              Number(item.quantityReturned) +
+                              Number(item.quantityDamaged) +
+                              Number(item.quantityExpired)
+                            ) || required(v)
+                        ]"
+                        hint="Good returns are restocked; damaged and expired stock is written off."
                       />
 
                       <q-input
                         v-model="item.quantityRemaining"
                         outlined
                         type="number"
+                        inputmode="numeric"
+                        lazy-rules
+                        :rules="[nonnegative, whole]"
                         min="0"
                         step="1"
                         :disable="reconciliationWritesDisabled"
@@ -440,12 +526,13 @@
                       class="text-caption text-grey-7 q-mt-sm"
                     >
                       {{
-                        resolveOpenIssueLine(item.stockIssueItemId).sku ?? 'Variant'
+                        resolveOpenIssueLine(item.stockIssueItemId).sku ??
+                        'Variant'
                       }}
                       /
                       {{
-                        resolveOpenIssueLine(item.stockIssueItemId).batch_code ??
-                        'Batch'
+                        resolveOpenIssueLine(item.stockIssueItemId)
+                          .batch_code ?? 'Batch'
                       }}
                       /
                       {{
@@ -510,7 +597,9 @@
           <q-tab-panel name="remittance-entry" class="operations-tab-panel">
             <div class="operations-tab-block">
               <div class="section-label">Remittance workflow</div>
-              <div class="section-title">Record cash received from retailers</div>
+              <div class="section-title"
+                >Record cash received from retailers</div
+              >
 
               <div class="text-body2 text-grey-8 q-mt-sm">
                 Post receipts separately from stock recognition so collections
@@ -525,11 +614,18 @@
                 {{ remittanceWriteMessage }}
               </q-banner>
 
+              <WriteStatus
+                action="remittances"
+                @saved="onSaved(resetRemittanceForm)"
+              />
               <q-form class="q-mt-lg" @submit.prevent="submitRemittance">
                 <div class="inline-form-grid">
                   <q-select
                     v-model="remittanceForm.retailerId"
                     outlined
+                    behavior="dialog"
+                    lazy-rules
+                    :rules="[required]"
                     emit-value
                     map-options
                     :disable="
@@ -556,6 +652,8 @@
                     v-model="remittanceForm.receivedOn"
                     outlined
                     type="date"
+                    lazy-rules
+                    :rules="[required]"
                     :disable="remittanceWritesDisabled"
                     label="Received date"
                   />
@@ -564,6 +662,9 @@
                     v-model="remittanceForm.amount"
                     outlined
                     type="number"
+                    inputmode="decimal"
+                    lazy-rules
+                    :rules="[positive]"
                     min="0"
                     step="100"
                     :disable="remittanceWritesDisabled"
@@ -617,7 +718,9 @@
           <q-tab-panel name="expense-entry" class="operations-tab-panel">
             <div class="operations-tab-block">
               <div class="section-label">Expense workflow</div>
-              <div class="section-title">Capture operating costs against profit</div>
+              <div class="section-title"
+                >Capture operating costs against profit</div
+              >
 
               <div class="text-body2 text-grey-8 q-mt-sm">
                 Keep expense posting separate from inventory truth while margin
@@ -632,6 +735,10 @@
                 {{ expenseWriteMessage }}
               </q-banner>
 
+              <WriteStatus
+                action="expenses"
+                @saved="onSaved(resetExpenseForm)"
+              />
               <q-form class="q-mt-lg" @submit.prevent="submitExpense">
                 <div class="inline-form-grid">
                   <q-input
@@ -645,6 +752,8 @@
                     v-model="expenseForm.incurredOn"
                     outlined
                     type="date"
+                    lazy-rules
+                    :rules="[required]"
                     :disable="expenseWritesDisabled"
                     label="Expense date"
                   />
@@ -653,6 +762,9 @@
                     v-model="expenseForm.amount"
                     outlined
                     type="number"
+                    inputmode="decimal"
+                    lazy-rules
+                    :rules="[positive]"
                     min="0"
                     step="100"
                     :disable="expenseWritesDisabled"
@@ -707,7 +819,9 @@
             <section class="card-grid card-grid--two">
               <div class="operations-tab-block">
                 <div class="section-label">Reconciliation history</div>
-                <div class="section-title">Recent stock settlement snapshots</div>
+                <div class="section-title"
+                  >Recent stock settlement snapshots</div
+                >
 
                 <div
                   v-if="workspace.reconciliations.length > 0"
@@ -726,25 +840,35 @@
                     </div>
 
                     <div class="text-body2 text-grey-8 q-mt-sm">
-                      {{ reconciliation.retailer?.retailer_name ?? 'Retailer' }} /
+                      {{ reconciliation.retailer?.retailer_name ?? 'Retailer' }}
+                      /
                       {{ formatDateTime(reconciliation.reconciled_at) }}
                     </div>
 
                     <div class="summary-pill-row q-mt-sm">
                       <q-chip square color="grey-2" text-color="grey-9">
-                        Sold {{ formatQuantity(reconciliation.total_sold_quantity) }}
+                        Sold
+                        {{ formatQuantity(reconciliation.total_sold_quantity) }}
                       </q-chip>
                       <q-chip square color="grey-2" text-color="grey-9">
                         Returned
-                        {{ formatQuantity(reconciliation.total_returned_quantity) }}
+                        {{
+                          formatQuantity(reconciliation.total_returned_quantity)
+                        }}
                       </q-chip>
                       <q-chip square color="grey-2" text-color="grey-9">
                         Damaged
-                        {{ formatQuantity(reconciliation.total_damaged_quantity) }}
+                        {{
+                          formatQuantity(reconciliation.total_damaged_quantity)
+                        }}
                       </q-chip>
                       <q-chip square color="grey-2" text-color="grey-9">
                         Remaining
-                        {{ formatQuantity(reconciliation.total_remaining_quantity) }}
+                        {{
+                          formatQuantity(
+                            reconciliation.total_remaining_quantity
+                          )
+                        }}
                       </q-chip>
                     </div>
 
@@ -806,7 +930,9 @@
                           "
                         >
                           /
-                          {{ remittance.reconciliation.reconciliation_reference }}
+                          {{
+                            remittance.reconciliation.reconciliation_reference
+                          }}
                         </span>
                       </div>
                     </article>
@@ -866,6 +992,9 @@
 </template>
 
 <script setup>
+import WriteStatus from '@/components/WriteStatus.vue'
+import { isWriteLocked } from '@/services/writes'
+import { required, positive, nonnegative, whole } from '@/lib/validation'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { hasAllowedRole } from '@/constants/roles'
@@ -887,7 +1016,7 @@ function createLineKey(prefix) {
 }
 
 function getTodayString() {
-  return new Date().toISOString().slice(0, 10)
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Kampala' })
 }
 
 function createReconciliationLine() {
@@ -897,6 +1026,8 @@ function createReconciliationLine() {
     quantitySold: '',
     quantityReturned: '',
     quantityDamaged: '',
+    quantityExpired: '',
+    returnReason: '',
     quantityRemaining: '',
     unitPrice: ''
   }
@@ -1040,7 +1171,7 @@ const estimatedReconciliationSalesValue = computed(() =>
     (total, item) =>
       total +
       Math.max(0, Math.trunc(asNumber(item.quantitySold))) *
-        Math.max(0, asNumber(item.unitPrice)),
+        Math.max(0, asNumber(priceForLine(item))),
     0
   )
 )
@@ -1087,6 +1218,8 @@ const selectedRetailerOutstandingAmount = computed(() => {
 const reconciliationWritesDisabled = computed(
   () =>
     workspace.value.mode !== 'live' ||
+    isSubmittingReconciliation.value ||
+    isWriteLocked('reconciliations') ||
     !canRecordReconciliation.value ||
     workspace.value.retailers.length === 0 ||
     workspace.value.openIssueLines.length === 0
@@ -1095,17 +1228,23 @@ const reconciliationWritesDisabled = computed(
 const remittanceWritesDisabled = computed(
   () =>
     workspace.value.mode !== 'live' ||
+    isSubmittingRemittance.value ||
+    isWriteLocked('remittances') ||
     !canRecordRemittance.value ||
     workspace.value.retailers.length === 0
 )
 
 const expenseWritesDisabled = computed(
-  () => workspace.value.mode !== 'live' || !canRecordExpense.value
+  () =>
+    workspace.value.mode !== 'live' ||
+    isSubmittingExpense.value ||
+    isWriteLocked('expenses') ||
+    !canRecordExpense.value
 )
 
 const reconciliationWriteMessage = computed(() => {
   if (workspace.value.mode !== 'live') {
-    return 'Live reconciliation writes are disabled until the app is connected to a Supabase project with the phase 4 migration applied.'
+    return 'Live entry is unavailable. Refresh the workspace to reconnect.'
   }
 
   if (!canRecordReconciliation.value) {
@@ -1125,7 +1264,7 @@ const reconciliationWriteMessage = computed(() => {
 
 const remittanceWriteMessage = computed(() => {
   if (workspace.value.mode !== 'live') {
-    return 'Live remittance writes are disabled until the app is connected to a Supabase project with the phase 4 migration applied.'
+    return 'Live entry is unavailable. Refresh the workspace to reconnect.'
   }
 
   if (!canRecordRemittance.value) {
@@ -1141,7 +1280,7 @@ const remittanceWriteMessage = computed(() => {
 
 const expenseWriteMessage = computed(() => {
   if (workspace.value.mode !== 'live') {
-    return 'Live expense writes are disabled until the app is connected to a Supabase project with the phase 4 migration applied.'
+    return 'Live entry is unavailable. Refresh the workspace to reconnect.'
   }
 
   if (!canRecordExpense.value) {
@@ -1265,26 +1404,20 @@ function getRetailerBalanceState(balance) {
 }
 
 function suggestUnitPriceForOpenLine(openLine) {
-  if (!openLine) {
-    return ''
-  }
-
-  for (const reconciliation of workspace.value.reconciliations ?? []) {
-    for (const item of reconciliation.items ?? []) {
-      if (item.stock_issue_item_id === openLine.stock_issue_item_id) {
-        return `${asNumber(item.unit_price)}`
-      }
-
-      if (
-        reconciliation.retailer?.id === openLine.retailer_id &&
-        item.variant?.id === openLine.variant_id
-      ) {
-        return `${asNumber(item.unit_price)}`
-      }
-    }
-  }
-
-  return ''
+  if (!openLine) return null
+  const at = toIsoTimestamp(reconciliationForm.reconciledOn)
+  return (
+    (workspace.value.pricing ?? []).find(
+      price =>
+        price.variant_id === openLine.variant_id &&
+        Date.parse(price.effective_from) <= Date.parse(at)
+    )?.unit_price ?? null
+  )
+}
+function priceForLine(item) {
+  return suggestUnitPriceForOpenLine(
+    resolveOpenIssueLine(item.stockIssueItemId)
+  )
 }
 
 function applyOpenIssueDefaults(line) {
@@ -1294,6 +1427,8 @@ function applyOpenIssueDefaults(line) {
     line.quantitySold = ''
     line.quantityReturned = ''
     line.quantityDamaged = ''
+    line.quantityExpired = ''
+    line.returnReason = ''
     line.quantityRemaining = ''
     line.unitPrice = ''
     return
@@ -1302,6 +1437,8 @@ function applyOpenIssueDefaults(line) {
   line.quantitySold = ''
   line.quantityReturned = ''
   line.quantityDamaged = ''
+  line.quantityExpired = ''
+  line.returnReason = ''
   line.quantityRemaining = `${asNumber(openLine.quantity_open)}`
   line.unitPrice = suggestUnitPriceForOpenLine(openLine)
 }
@@ -1347,6 +1484,11 @@ function resetExpenseForm() {
   expenseForm.notes = ''
 }
 
+async function onSaved(resetForm) {
+  resetForm()
+  await loadWorkspace()
+}
+
 async function loadWorkspace() {
   isLoading.value = true
   loadError.value = ''
@@ -1387,8 +1529,9 @@ async function submitReconciliation() {
       item.quantityRemaining === ''
         ? Number.NaN
         : Math.trunc(asNumber(item.quantityRemaining)),
-    unit_price:
-      item.unitPrice === '' ? Number.NaN : Math.max(0, asNumber(item.unitPrice))
+    quantity_expired:
+      item.quantityExpired === '' ? 0 : Number(item.quantityExpired),
+    return_reason: item.returnReason
   }))
 
   if (!reconciliationForm.retailerId) {
@@ -1411,14 +1554,14 @@ async function submitReconciliation() {
         item.quantity_returned < 0 ||
         item.quantity_damaged < 0 ||
         item.quantity_remaining < 0 ||
-        !Number.isFinite(item.unit_price) ||
-        item.unit_price < 0
+        !Number.isInteger(item.quantity_expired) ||
+        item.quantity_expired < 0
     )
   ) {
     $q.notify({
       type: 'warning',
       message:
-        'Complete every reconciliation line with a stock line, non-negative quantities, and a selling price.'
+        'Complete every reconciliation line with a stock line, non-negative quantities, and a saved variant price for that date.'
     })
     return
   }
@@ -1454,6 +1597,7 @@ async function submitReconciliation() {
       item.quantity_sold +
       item.quantity_returned +
       item.quantity_damaged +
+      item.quantity_expired +
       item.quantity_remaining
 
     if (accountedQuantity !== Math.trunc(asNumber(openLine.quantity_open))) {
@@ -1619,6 +1763,8 @@ watch(
         item.quantitySold = ''
         item.quantityReturned = ''
         item.quantityDamaged = ''
+        item.quantityExpired = ''
+        item.returnReason = ''
         item.quantityRemaining = ''
         item.unitPrice = ''
       }
