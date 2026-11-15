@@ -1,12 +1,14 @@
 <template>
   <q-page class="auth-page">
-    <div class="auth-page__glow auth-page__glow--left" />
-    <div class="auth-page__glow auth-page__glow--right" />
-
     <div class="auth-shell">
-      <section class="auth-hero">
-        <p class="auth-hero__eyebrow">Beecone Honey</p>
-        <h1 class="auth-hero__title"
+      <!--
+        The h1 stays visible at every width (MF-08). Below 1024px only the
+        brand line and title remain; the body copy and highlights are desktop
+        context.
+      -->
+      <section class="auth-hero" aria-labelledby="auth-title">
+        <p class="auth-hero__eyebrow">Beecone Honey · BOMS</p>
+        <h1 id="auth-title" class="auth-hero__title"
           >Trace every batch with the right people in the right places.</h1
         >
         <p class="auth-hero__body">
@@ -14,34 +16,39 @@
           remittance stays tied to a real teammate.
         </p>
 
-        <div class="auth-hero__highlights">
-          <div
+        <ul class="auth-hero__highlights">
+          <li
             v-for="highlight in highlights"
             :key="highlight.title"
             class="auth-highlight"
           >
-            <q-icon :name="highlight.icon" size="24px" color="warning" />
+            <q-icon
+              :name="highlight.icon"
+              size="24px"
+              color="primary"
+              aria-hidden="true"
+            />
             <div>
               <div class="auth-highlight__title">{{ highlight.title }}</div>
               <div class="auth-highlight__text">{{ highlight.text }}</div>
             </div>
-          </div>
-        </div>
+          </li>
+        </ul>
       </section>
 
       <q-card flat class="auth-card">
         <q-card-section class="auth-card__header">
           <div>
-            <div class="auth-card__kicker">{{
+            <p class="auth-card__kicker">{{
               mode === 'sign-in' ? 'Sign in' : 'Request access'
-            }}</div>
-            <div class="auth-card__title">
+            }}</p>
+            <h2 class="auth-card__title">
               {{
                 mode === 'sign-in'
                   ? 'Access your Beecone workspace'
                   : 'Create your account request'
               }}
-            </div>
+            </h2>
           </div>
 
           <q-btn
@@ -55,25 +62,31 @@
         </q-card-section>
 
         <q-card-section>
-          <q-banner
+          <div
             v-if="statusMessage"
-            class="bg-secondary text-white rounded-borders q-mb-md"
+            class="auth-message auth-message--status"
+            role="status"
           >
             {{ statusMessage }}
-          </q-banner>
+          </div>
 
-          <q-banner
+          <div
             v-if="errorMessage"
-            class="bg-red-1 text-negative rounded-borders q-mb-md"
+            ref="errorRef"
+            class="auth-message auth-message--error"
+            role="alert"
+            tabindex="-1"
           >
             {{ errorMessage }}
-          </q-banner>
+          </div>
 
           <q-form class="auth-form" @submit.prevent="submitForm">
             <q-input
               v-if="mode === 'sign-up'"
               v-model="form.fullName"
               outlined
+              for="auth-full-name"
+              name="name"
               label="Full name"
               autocomplete="name"
               :disable="isBusy"
@@ -85,9 +98,14 @@
             <q-input
               v-model="form.email"
               outlined
+              for="auth-email"
+              name="email"
               type="email"
+              inputmode="email"
               label="Work email"
-              autocomplete="email"
+              :autocomplete="mode === 'sign-in' ? 'username' : 'email'"
+              autocapitalize="off"
+              spellcheck="false"
               :disable="isBusy"
               :rules="[
                 value => Boolean(value?.trim()) || 'Enter an email address',
@@ -98,9 +116,13 @@
             <q-input
               v-model="form.password"
               outlined
+              for="auth-password"
+              name="password"
               :type="showPassword ? 'text' : 'password'"
               label="Password"
-              autocomplete="current-password"
+              :autocomplete="
+                mode === 'sign-in' ? 'current-password' : 'new-password'
+              "
               :disable="isBusy"
               :rules="[
                 value => Boolean(value) || 'Enter your password',
@@ -115,7 +137,8 @@
                   flat
                   round
                   dense
-                  aria-label="Show or hide password"
+                  :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                  :aria-pressed="showPassword ? 'true' : 'false'"
                   :icon="showPassword ? 'visibility_off' : 'visibility'"
                   @click="showPassword = !showPassword"
                 />
@@ -131,6 +154,7 @@
               class="full-width"
               color="primary"
               no-caps
+              unelevated
               type="submit"
               size="lg"
               :loading="isBusy"
@@ -149,7 +173,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   authState,
@@ -167,6 +191,7 @@ const mode = ref('sign-in')
 const showPassword = ref(false)
 const errorMessage = ref('')
 const statusMessage = ref('')
+const errorRef = ref(null)
 const form = reactive({
   fullName: '',
   email: '',
@@ -198,6 +223,13 @@ function toggleMode() {
   statusMessage.value = ''
   showPassword.value = false
   mode.value = mode.value === 'sign-in' ? 'sign-up' : 'sign-in'
+}
+
+async function showError(message) {
+  errorMessage.value = message
+  // role="alert" announces it; focus lets keyboard users continue from it.
+  await nextTick()
+  errorRef.value?.focus()
 }
 
 async function submitForm() {
@@ -239,10 +271,89 @@ async function submitForm() {
       'Account request received. Check your email to confirm the account, then ask an admin to assign your role.'
     form.password = ''
   } catch (error) {
-    errorMessage.value =
+    await showError(
       error instanceof Error
         ? error.message
         : 'Authentication failed. Please try again.'
+    )
   }
 }
 </script>
+
+<style scoped>
+/*
+ * Overrides of the global auth rules in app.scss (MF-08, MF-13): a flat page
+ * without decorative glows, a visible h1 at every width and no overflow at
+ * 320px.
+ */
+.auth-page {
+  overflow: visible;
+}
+.auth-page .auth-hero {
+  background: var(--boms-color-surface-subtle);
+}
+.auth-hero__eyebrow,
+.auth-card__kicker {
+  margin: 0;
+}
+.auth-card__title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+.auth-hero__highlights {
+  list-style: none;
+  padding: 0;
+}
+.auth-highlight {
+  background: var(--boms-color-surface);
+}
+.auth-message {
+  margin-bottom: var(--boms-space-4);
+  padding: var(--boms-space-3) var(--boms-space-4);
+  border-radius: var(--boms-radius-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.auth-message:focus-visible {
+  outline: 3px solid var(--boms-color-focus);
+  outline-offset: 2px;
+}
+.auth-message--status {
+  background: var(--boms-color-info-bg);
+  color: var(--boms-color-info-text);
+}
+.auth-message--error {
+  border: 1px solid var(--boms-color-danger);
+  background: var(--boms-color-danger-bg);
+  color: var(--boms-color-danger-text);
+}
+
+@media (max-width: 1023px) {
+  /* app.scss hides .auth-hero below 1024px; keep the brand line and h1. */
+  .auth-page .auth-hero {
+    display: block;
+    padding: 0 0 var(--boms-space-2);
+    border: 0;
+    background: none;
+  }
+  .auth-page .auth-hero__title {
+    font-size: 1.375rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .auth-page .auth-hero__body,
+  .auth-page .auth-hero__highlights {
+    display: none;
+  }
+  .auth-page .auth-shell {
+    gap: var(--boms-space-3);
+    align-content: start;
+  }
+  .auth-page .auth-card__header {
+    padding-top: var(--boms-space-4);
+  }
+}
+</style>

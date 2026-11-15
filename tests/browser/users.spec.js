@@ -56,13 +56,28 @@ for (const width of [375, 1280])
     })
     await page.goto('/#/admin')
     await expect(
-      page.getByRole('heading', { name: 'Users and access' })
+      page.getByRole('heading', { level: 1, name: 'Users & access' })
     ).toBeVisible()
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Staff accounts' })
+    ).toBeVisible()
+    // Diagnostics stay available but collapsed out of the primary task.
+    await expect(page.getByText('Session details')).toBeVisible()
+    await expect(
+      page.getByRole('main').getByText('Signed in as', { exact: true })
+    ).toBeHidden()
     await page.getByRole('button', { name: 'Add user', exact: true }).click()
+    await expect(
+      page.getByRole('dialog').getByRole('heading', { name: 'Add user' })
+    ).toBeVisible()
     await page.getByRole('button', { name: 'Create user', exact: true }).click()
     await expect(
       page.getByText('This field is required.').first()
     ).toBeVisible()
+    await expect(
+      page.locator('.form-error-summary').getByRole('link')
+    ).toHaveCount(3)
+    await expect(page.getByLabel('Full name', { exact: true })).toBeFocused()
     expect(submitted).toHaveLength(0)
     await page.getByLabel('Full name', { exact: true }).fill('New colleague')
     await page

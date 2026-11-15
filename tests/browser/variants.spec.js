@@ -140,8 +140,19 @@ for (const width of [375, 1280])
       .getByRole('button', { name: 'Save variant', exact: true })
       .click()
     await expect(
-      page.getByText('Select a product or create a new one.')
+      page.getByText('Select a product or create a new one.', { exact: true })
     ).toBeVisible()
+    // MF-10: every invalid field is summarised and the first one is focused.
+    const summary = page.locator('.form-error-summary')
+    await expect(
+      summary.getByRole('link', {
+        name: 'Product: Select a product or create a new one.'
+      })
+    ).toBeVisible()
+    await expect(
+      summary.getByRole('link', { name: /^Pack size \(grams\):/ })
+    ).toBeVisible()
+    await expect(page.getByLabel('Product', { exact: true })).toBeFocused()
     expect(requests).toHaveLength(0)
     await page
       .getByLabel('Create a new product for this variant', { exact: true })

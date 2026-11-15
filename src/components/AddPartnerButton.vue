@@ -1,32 +1,45 @@
 <template>
   <q-btn
-    v-if="allowed"
+    v-if="allowed && !hideTrigger"
     color="primary"
     outline
     no-caps
     icon="add_business"
     :label="`Add ${kind}`"
-    @click="open = true"
+    @click="show"
   />
-  <q-dialog v-model="open" persistent :maximized="$q.screen.lt.sm">
+  <q-dialog
+    v-model="dialogOpen"
+    persistent
+    :maximized="$q.screen.lt.sm"
+    :aria-labelledby="`add-${kind}-title`"
+  >
     <q-card class="partner-dialog">
-      <q-card-section class="row items-center justify-between">
-        <h2 class="text-h6 q-my-none">Add {{ kind }}</h2>
+      <q-card-section class="manager-header">
+        <h2 :id="`add-${kind}-title`" class="manager-title">Add {{ kind }}</h2>
         <q-btn
           flat
           round
           icon="close"
           :aria-label="`Close ${kind} form`"
           :disable="pending"
-          @click="open = false"
+          @click="hide"
         />
       </q-card-section>
-      <q-form @submit.prevent="save">
+      <q-form
+        ref="formRef"
+        greedy
+        no-error-focus
+        @submit.prevent="save"
+        @validation-error="onInvalid"
+      >
         <q-card-section class="q-gutter-md">
           <WriteStatus :action="action" @saved="finish" />
+          <FormErrorSummary ref="summaryRef" :errors="formErrors" />
           <q-input
             v-model="form.name"
             outlined
+            :for="`add-${kind}-name`"
             :label="kind === 'supplier' ? 'Supplier name' : 'Retailer name'"
             :rules="[required]"
             :disable="locked"
@@ -37,13 +50,14 @@
             v-if="kind === 'supplier'"
             v-model="form.supplierKind"
             outlined
+            for="add-supplier-kind"
             label="Supplier type"
             :options="supplierKinds"
             emit-value
             map-options
             :rules="[required]"
             :disable="locked"
-            behavior="dialog"
+            :behavior="selectBehavior"
           />
           <q-input
             v-model="form.contactName"
@@ -51,7 +65,7 @@
             label="Contact person"
             :disable="locked"
             maxlength="120"
-            autocomplete="name"
+            autocomplete="off"
           />
           <q-input
             v-model="form.phone"
@@ -60,17 +74,18 @@
             type="tel"
             :disable="locked"
             maxlength="40"
-            autocomplete="tel"
+            autocomplete="off"
           />
           <q-input
             v-model="form.email"
             outlined
+            :for="`add-${kind}-email`"
             label="Contact email"
             type="email"
             :rules="[emailRule]"
             :disable="locked"
             maxlength="254"
-            autocomplete="email"
+            autocomplete="off"
           />
           <q-input
             v-if="kind === 'retailer'"
@@ -91,13 +106,7 @@
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn
-            flat
-            no-caps
-            label="Close"
-            :disable="pending"
-            @click="open = false"
-          />
+          <q-btn flat no-caps label="Close" :disable="pending" @click="hide" />
           <q-btn
             color="primary"
             no-caps
@@ -113,11 +122,14 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { canWrite } from '@/constants/capabilities'
 import { authState } from '@/services/auth'
 import { writeAction, writeStates, isWriteLocked } from '@/services/writes'
 import { required } from '@/lib/validation'
+import { collectFieldErrors, useFormErrors } from '@/composables/useFormErrors'
+import FormErrorSummary from '@/components/FormErrorSummary.vue'
 import WriteStatus from '@/components/WriteStatus.vue'
 
 const props = defineProps({
@@ -125,11 +137,27 @@ const props = defineProps({
     type: String,
     required: true,
     validator: value => ['supplier', 'retailer'].includes(value)
-  }
+  },
+  /**
+   * v-model:open. Controls the dialog from outside, e.g. from a PageHeader
+   * overflow item. Leave unset to use the built-in button only.
+   */
+  open: { type: Boolean, default: undefined },
+  /** Hide the built-in "Add supplier/retailer" button. */
+  hideTrigger: Boolean
 })
-const emit = defineEmits(['saved'])
+const emit = defineEmits(['saved', 'update:open'])
 const $q = useQuasar()
-const open = ref(false)
+// MF-17: touch-friendly dialog pickers on phones, keyboard menus elsewhere.
+const selectBehavior = computed(() => ($q.screen.lt.sm ? 'dialog' : 'menu'))
+const formRef = ref(null)
+const {
+  errors: formErrors,
+  summaryRef,
+  fail,
+  clear: clearErrors
+} = useFormErrors()
+const dialogOpen = ref(false)
 const blank = () => ({
   name: '',
   supplierKind: 'mixed',
@@ -141,14 +169,7 @@ const blank = () => ({
 })
 const form = reactive(blank())
 const action = computed(() => `${props.kind}s`)
-const allowed = computed(() =>
-  [
-    'admin_owner',
-    'operations_manager',
-    'warehouse_staff',
-    ...(props.kind === 'retailer' ? ['sales_or_distribution_staff'] : [])
-  ].includes(authState.role)
-)
+const allowed = computed(() => canWrite(authState.role, action.value))
 const pending = computed(() => writeStates[action.value]?.status === 'pending')
 const locked = computed(() => isWriteLocked(action.value))
 const supplierKinds = [
@@ -161,10 +182,43 @@ const emailRule = value =>
   !value ||
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) ||
   'Enter a valid email address.'
+/** Open the add form. No-op for roles that cannot create this partner. */
+function show() {
+  if (!allowed.value) return false
+  clearErrors()
+  dialogOpen.value = true
+  return true
+}
+/** Close the dialog. Refused (returns false) while a save is pending. */
+function hide() {
+  if (pending.value) return false
+  dialogOpen.value = false
+  clearErrors()
+  return true
+}
+watch(dialogOpen, value => {
+  if (value !== props.open) emit('update:open', value)
+})
+watch(
+  () => props.open,
+  value => {
+    if (value === true && !dialogOpen.value) show()
+    else if (value === false && dialogOpen.value && !hide())
+      emit('update:open', true)
+  },
+  { immediate: true }
+)
+async function onInvalid() {
+  await nextTick()
+  await fail(collectFieldErrors(formRef))
+}
 function finish(result) {
   emit('saved', result)
   Object.assign(form, blank())
-  open.value = false
+  clearErrors()
+  dialogOpen.value = false
+  // Supplementary: the dialog closes, so the outcome is also confirmed by the
+  // new partner being selected in the page form that opened it.
   $q.notify({
     type: 'positive',
     message: `${props.kind === 'supplier' ? 'Supplier' : 'Retailer'} added.`
@@ -172,6 +226,7 @@ function finish(result) {
 }
 async function save() {
   if (locked.value || !allowed.value) return
+  clearErrors()
   const body = {
     name: form.name.trim(),
     contactName: form.contactName.trim(),
@@ -187,11 +242,27 @@ async function save() {
     /* WriteStatus displays validation errors or the saved retry action. */
   }
 }
+
+defineExpose({ show, hide })
 </script>
 
 <style scoped>
 .partner-dialog {
   width: 560px;
   max-width: 100%;
+}
+.manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--boms-space-2);
+}
+.manager-title {
+  margin: 0;
+  color: var(--boms-color-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: normal;
 }
 </style>
