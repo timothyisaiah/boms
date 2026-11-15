@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import auth from '../api/auth.js'
 import workspace from '../api/workspace.js'
+import history from '../api/history.js'
 import write from '../api/write.js'
 import reports from '../api/reports.js'
 import cleanup from '../api/cleanup.js'
@@ -14,6 +15,7 @@ import debugSession from '../api/debug-session.js'
 const routes: Record<string, typeof auth> = {
   auth,
   workspace,
+  history,
   write,
   reports,
   cleanup,
