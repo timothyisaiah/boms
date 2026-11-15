@@ -76,7 +76,9 @@ const props = defineProps({
   /** Show a compact skeleton while the first load is pending. */
   skeleton: { type: Boolean, default: false },
   retryable: { type: Boolean, default: true },
-  retryLabel: { type: String, default: 'Retry' }
+  retryLabel: { type: String, default: 'Retry' },
+  /** Disable announcements when another instance owns the live region. */
+  announce: { type: Boolean, default: true }
 })
 const emit = defineEmits(['retry'])
 
@@ -112,6 +114,7 @@ const showSkeleton = computed(() => props.skeleton && props.mode === 'loading')
 // Exactly one live region per state: when the banner shows, it alone
 // announces (role=alert) and the chip becomes plain text.
 const chipRole = computed(() => {
+  if (!props.announce) return null
   if (props.mode !== 'unavailable') return 'status'
   return props.display === 'chip' ? 'alert' : null
 })
