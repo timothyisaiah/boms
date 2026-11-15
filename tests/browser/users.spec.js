@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test'
+import { expectNoHorizontalOverflow, serveLocalFonts } from './support/index.js'
 
 for (const width of [375, 1280])
   test(`administrator creates and manages users at ${width}px`, async ({
     page
   }) => {
     await page.setViewportSize({ width, height: 844 })
+    await serveLocalFonts(page)
     const admin = {
       id: '00000000-0000-4000-8000-000000000001',
       email: 'admin@example.invalid',
@@ -102,11 +104,7 @@ for (const width of [375, 1280])
     await expect(page.getByText('Inactive', { exact: true })).toBeVisible()
     await page.getByLabel('Search users by name or email').fill('colleague')
     await expect(page.locator('.user-card')).toHaveCount(1)
-    await expect
-      .poll(() =>
-        page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
-      )
-      .toBe(true)
+    await expectNoHorizontalOverflow(page)
     await page.screenshot({
       path: `test-results/${width}-users.png`,
       fullPage: true
