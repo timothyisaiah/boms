@@ -54,25 +54,28 @@ export const ROUTES = {
   admin: {
     name: 'admin',
     path: '/admin',
-    heading: 'Access and settings',
-    workspace: 'settings',
+    heading: 'Users & access',
+    workspace: null,
     roles: allowedRolesFor('admin')
+  },
+  settings: {
+    name: 'settings',
+    path: '/settings',
+    heading: 'Catalogue settings',
+    workspace: 'settings',
+    roles: allowedRolesFor('settings')
   },
   accessDenied: {
     name: 'access-denied',
     path: '/access-denied',
-    // No h1 yet (page agents will add one); identify it by its message.
-    heading: null,
-    ready: 'this workspace is restricted',
+    heading: 'Access restricted',
     workspace: null,
     roles: ROLES
   },
   notFound: {
     name: 'not-found',
     path: '/not-a-real-route',
-    // No h1 yet (page agents will add one); identify it by its message.
-    heading: null,
-    ready: 'This route is not part of the Beecone workspace.',
+    heading: 'Page not found',
     workspace: null,
     roles: ROLES
   }

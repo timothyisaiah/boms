@@ -18,13 +18,7 @@ const DESKTOP = { width: 1440, height: 900 }
 // `<route>@<phone|desktop>` → why the heading checks currently fail.
 const KNOWN_HEADING_DEFECTS = {
   'auth@phone':
-    'Auth h1 is inside .auth-hero, which is display:none below 1024px; phones have no visible h1.',
-  'access-denied@phone':
-    'UnauthorizedPage has no h1 (its title is a div.section-title).',
-  'access-denied@desktop':
-    'UnauthorizedPage has no h1 (its title is a div.section-title).',
-  'not-found@phone': 'ErrorNotFound has no h1 (its message is a div.text-h4).',
-  'not-found@desktop': 'ErrorNotFound has no h1 (its message is a div.text-h4).'
+    'Auth h1 is inside .auth-hero, which is display:none below 1024px; phones have no visible h1.'
 }
 
 for (const [size, viewport] of Object.entries({
