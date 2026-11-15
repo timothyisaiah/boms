@@ -193,6 +193,18 @@ function buildFixtures() {
       reconciliations,
       remittances: [],
       expenses: [],
+      // `view=summary` additions (docs/audits/history-api.md §3).
+      reconciliationOptions: reconciliations.map(
+        ({ items: _items, ...option }) => ({
+          ...option,
+          retailer_id: option.retailer.id
+        })
+      ),
+      historyCounts: {
+        reconciliations: reconciliations.length,
+        remittances: 0,
+        expenses: 0
+      },
       retailerBalances: [balance],
       profitSummary: {
         active_retailers: 1,
