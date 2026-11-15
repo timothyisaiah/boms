@@ -142,6 +142,10 @@ const bannerDetail = computed(
 .workspace-state--chip {
   display: inline-flex;
 }
+.workspace-state :deep(.q-icon) {
+  flex: 0 0 auto;
+  overflow: hidden;
+}
 .workspace-state__skeleton {
   display: grid;
   gap: var(--boms-space-2);

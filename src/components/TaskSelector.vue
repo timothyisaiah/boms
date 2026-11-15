@@ -226,6 +226,11 @@ function onPhoneKeydown(event) {
   text-align: left;
   cursor: pointer;
 }
+.task-selector__option :deep(.q-icon) {
+  flex: 0 0 auto;
+  /* Icon ligature text must not widen the grid before the font loads. */
+  overflow: hidden;
+}
 .task-selector__option-label {
   min-width: 0;
   overflow-wrap: anywhere;

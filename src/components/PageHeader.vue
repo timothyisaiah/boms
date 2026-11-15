@@ -125,6 +125,8 @@ function run(item) {
 .page-header__overflow {
   flex: 0 0 auto;
   margin-left: auto;
+  /* Icon ligature text must never widen the page before the font loads. */
+  overflow: hidden;
 }
 .page-header__menu {
   min-width: 14rem;

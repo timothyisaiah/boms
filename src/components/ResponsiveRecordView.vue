@@ -70,9 +70,9 @@
         <q-pagination
           :model-value="currentPage"
           :max="pageCount"
-          :max-pages="5"
-          boundary-links
+          :max-pages="3"
           direction-links
+          :aria-label="`${title || 'Records'} pages`"
           @update:model-value="goToPage"
         />
       </div>
@@ -331,6 +331,14 @@ function goToPage(page) {
 .record-view__pagination {
   display: flex;
   justify-content: center;
+  min-width: 0;
+}
+.record-view__pagination :deep(.q-pagination) {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.record-view__pagination :deep(.q-icon) {
+  overflow: hidden;
 }
 .record-view__table {
   border-radius: var(--boms-radius-md);
