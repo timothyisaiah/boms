@@ -3,9 +3,11 @@
     <section class="page-hero">
       <div>
         <p class="page-hero__eyebrow">Admin</p>
-        <h1 class="page-hero__title">Access and settings</h1>
+        <h1 class="page-hero__title">Users &amp; access</h1>
         <p class="page-hero__body">
-          Add staff accounts, manage access, and configure your catalogue.
+          Add staff accounts and manage their access. Variant prices and recipe
+          defaults are in
+          <router-link to="/settings">Catalogue settings</router-link>.
         </p>
       </div>
     </section>
@@ -76,12 +78,10 @@
         </q-list>
       </q-card>
     </section>
-    <CatalogueSettings />
   </q-page>
 </template>
 
 <script setup>
-import CatalogueSettings from '@/components/CatalogueSettings.vue'
 import UserManagement from '@/components/UserManagement.vue'
 import { computed } from 'vue'
 import { ROLE_OPTIONS, getRoleLabel } from '@/constants/roles'
