@@ -15,9 +15,20 @@ export const sessions = pgTable('sessions', {
   userId: uuid('user_id').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull()
 })
-export function database() {
-  const url = process.env.DATABASE_URL
-  if (!url) throw new Error('Database connection is not configured')
+function connect(url: string) {
   const query = neon(url)
   return { query, db: drizzle(query) }
+}
+type Database = ReturnType<typeof connect>
+let testDatabase: Database | null = null
+// Test seam: lets in-memory PGlite tests run the real read handlers. Production
+// code never calls it; passing null restores the configured Neon connection.
+export function setTestDatabase(value: unknown) {
+  testDatabase = value as Database | null
+}
+export function database(): Database {
+  if (testDatabase) return testDatabase
+  const url = process.env.DATABASE_URL
+  if (!url) throw new Error('Database connection is not configured')
+  return connect(url)
 }
