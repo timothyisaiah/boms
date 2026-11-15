@@ -1,6 +1,6 @@
 <template>
   <q-btn
-    v-if="allowed"
+    v-if="allowed && !hideTrigger"
     flat
     color="secondary"
     no-caps
@@ -9,22 +9,24 @@
     @click="openManager"
   />
 
-  <q-dialog v-model="open" persistent :maximized="$q.screen.lt.sm">
+  <q-dialog
+    v-model="dialogOpen"
+    persistent
+    :maximized="$q.screen.lt.sm"
+    :aria-labelledby="`${kind}-profiles-title`"
+  >
     <q-card class="partner-manager">
-      <q-card-section class="row items-center justify-between q-gutter-sm">
-        <div>
-          <div class="section-label">Profiles</div>
-          <h2 class="text-h6 q-my-none">
-            {{ editing ? `Edit ${kind}` : `Manage ${kind}s` }}
-          </h2>
-        </div>
+      <q-card-section class="manager-header">
+        <h2 :id="`${kind}-profiles-title`" class="manager-title">
+          {{ editing ? `Edit ${kind}` : `Manage ${kind}s` }}
+        </h2>
         <q-btn
           flat
           round
           icon="close"
           :aria-label="`Close ${kind} profiles`"
           :disable="saving"
-          @click="closeManager"
+          @click="hide"
         />
       </q-card-section>
 
@@ -37,7 +39,7 @@
           <q-banner
             v-if="notice"
             rounded
-            class="bg-green-1 q-mb-md"
+            class="manager-banner manager-banner--success q-mb-md"
             role="status"
           >
             {{ notice }}
@@ -45,7 +47,7 @@
           <q-banner
             v-if="loadError"
             rounded
-            class="bg-red-1 q-mb-md"
+            class="manager-banner manager-banner--danger q-mb-md"
             role="alert"
           >
             {{ loadError }}
@@ -68,7 +70,7 @@
               :options="statusOptions"
               emit-value
               map-options
-              behavior="dialog"
+              :behavior="selectBehavior"
             />
           </div>
           <q-linear-progress
@@ -84,7 +86,7 @@
             >
               <div class="row items-start justify-between q-gutter-sm">
                 <div class="partner-card-copy">
-                  <div class="text-weight-bold">{{ partner.name }}</div>
+                  <h3 class="partner-name">{{ partner.name }}</h3>
                   <div class="text-caption">
                     {{
                       kind === 'supplier'
@@ -93,9 +95,16 @@
                     }}
                   </div>
                 </div>
-                <q-chip :color="partner.is_active ? 'green-1' : 'grey-3'">
+                <span
+                  class="status-chip"
+                  :class="
+                    partner.is_active
+                      ? 'status-chip--success'
+                      : 'status-chip--neutral'
+                  "
+                >
                   {{ partner.is_active ? 'Active' : 'Inactive' }}
-                </q-chip>
+                </span>
               </div>
               <div class="profile-details q-mt-sm">
                 <span>{{ partner.contact_name || 'No contact person' }}</span>
@@ -119,7 +128,14 @@
         </q-card-section>
       </template>
 
-      <q-form v-else @submit.prevent="saveProfile">
+      <q-form
+        v-else
+        ref="formRef"
+        greedy
+        no-error-focus
+        @submit.prevent="saveProfile"
+        @validation-error="onInvalid"
+      >
         <q-card-section class="q-gutter-md q-pt-none">
           <q-btn
             flat
@@ -127,14 +143,20 @@
             icon="arrow_back"
             :disable="saving"
             label="Back to profiles"
-            @click="editing = false"
+            @click="backToList"
           />
-          <q-banner v-if="saveError" rounded class="bg-red-1" role="alert">{{
-            saveError
-          }}</q-banner>
+          <FormErrorSummary ref="summaryRef" :errors="formErrors" />
+          <q-banner
+            v-if="saveError"
+            rounded
+            class="manager-banner manager-banner--danger"
+            role="alert"
+            >{{ saveError }}</q-banner
+          >
           <q-input
             v-model="form.name"
             outlined
+            :for="`${kind}-profile-name`"
             :label="`${titleCase} name`"
             :rules="[required]"
             :disable="saving"
@@ -144,11 +166,12 @@
             v-if="kind === 'supplier'"
             v-model="form.supplierKind"
             outlined
+            for="supplier-profile-kind"
             label="Supplier type"
             :options="supplierKinds"
             emit-value
             map-options
-            behavior="dialog"
+            :behavior="selectBehavior"
             :rules="[required]"
             :disable="saving"
           />
@@ -156,6 +179,7 @@
             v-model="form.contactName"
             outlined
             label="Contact person"
+            autocomplete="off"
             :disable="saving"
             maxlength="120"
           />
@@ -164,14 +188,17 @@
             outlined
             label="Phone number"
             type="tel"
+            autocomplete="off"
             :disable="saving"
             maxlength="40"
           />
           <q-input
             v-model="form.email"
             outlined
+            :for="`${kind}-profile-email`"
             label="Contact email"
             type="email"
+            autocomplete="off"
             :rules="[emailRule]"
             :disable="saving"
             maxlength="254"
@@ -199,7 +226,11 @@
             :disable="saving"
             class="partner-status-toggle"
           />
-          <q-banner v-if="!form.isActive" rounded class="bg-amber-1">
+          <q-banner
+            v-if="!form.isActive"
+            rounded
+            class="manager-banner manager-banner--warning"
+          >
             Inactive {{ kind }}s remain in historical records but are removed
             from new transaction pickers.
           </q-banner>
@@ -210,7 +241,7 @@
             no-caps
             label="Cancel"
             :disable="saving"
-            @click="editing = false"
+            @click="backToList"
           />
           <q-btn
             color="primary"
@@ -227,20 +258,41 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
 import { apiRequest } from '@/lib/api'
 import { required } from '@/lib/validation'
+import { canWrite } from '@/constants/capabilities'
 import { authState } from '@/services/auth'
+import { collectFieldErrors, useFormErrors } from '@/composables/useFormErrors'
+import FormErrorSummary from './FormErrorSummary.vue'
 
 const props = defineProps({
   kind: {
     type: String,
     required: true,
     validator: value => ['supplier', 'retailer'].includes(value)
-  }
+  },
+  /**
+   * v-model:open. Controls the dialog from outside, e.g. from a PageHeader
+   * overflow item. Leave unset to use the built-in button only.
+   */
+  open: { type: Boolean, default: undefined },
+  /** Hide the built-in "Manage suppliers/retailers" button. */
+  hideTrigger: Boolean
 })
-const emit = defineEmits(['saved'])
-const open = ref(false),
+const emit = defineEmits(['saved', 'update:open'])
+const $q = useQuasar()
+// MF-17: touch-friendly dialog pickers on phones, keyboard menus elsewhere.
+const selectBehavior = computed(() => ($q.screen.lt.sm ? 'dialog' : 'menu'))
+const formRef = ref(null)
+const {
+  errors: formErrors,
+  summaryRef,
+  fail,
+  clear: clearErrors
+} = useFormErrors()
+const dialogOpen = ref(false),
   editing = ref(false),
   loading = ref(false),
   saving = ref(false)
@@ -264,14 +316,9 @@ const form = reactive({
 const titleCase = computed(() =>
   props.kind === 'supplier' ? 'Supplier' : 'Retailer'
 )
-const allowed = computed(() =>
-  [
-    'admin_owner',
-    'operations_manager',
-    'warehouse_staff',
-    ...(props.kind === 'retailer' ? ['sales_or_distribution_staff'] : [])
-  ].includes(authState.role)
-)
+// Profile editing uses the same role sets as creating the partner
+// (`write:suppliers` / `write:retailers`).
+const allowed = computed(() => canWrite(authState.role, `${props.kind}s`))
 const statusOptions = [
   { label: 'All statuses', value: 'all' },
   { label: 'Active', value: 'active' },
@@ -308,16 +355,44 @@ const emailRule = value =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) ||
   'Enter a valid email address.'
 async function openManager() {
-  open.value = true
+  if (!allowed.value) return
+  dialogOpen.value = true
   editing.value = false
+  clearErrors()
   notice.value = ''
   await loadPartners()
 }
-function closeManager() {
-  if (!saving.value) {
-    open.value = false
-    editing.value = false
-  }
+/** Open the profile list. */
+function show() {
+  return openManager()
+}
+/** Close the dialog. Refused (returns false) while a save is in flight. */
+function hide() {
+  if (saving.value) return false
+  dialogOpen.value = false
+  editing.value = false
+  clearErrors()
+  return true
+}
+watch(dialogOpen, value => {
+  if (value !== props.open) emit('update:open', value)
+})
+watch(
+  () => props.open,
+  value => {
+    if (value === true && !dialogOpen.value) show()
+    else if (value === false && dialogOpen.value && !hide())
+      emit('update:open', true)
+  },
+  { immediate: true }
+)
+async function onInvalid() {
+  await nextTick()
+  await fail(collectFieldErrors(formRef))
+}
+function backToList() {
+  editing.value = false
+  clearErrors()
 }
 async function loadPartners() {
   loading.value = true
@@ -343,6 +418,7 @@ function editPartner(partner) {
     isActive: partner.is_active
   })
   saveError.value = ''
+  clearErrors()
   editing.value = true
 }
 async function saveProfile() {
@@ -350,6 +426,7 @@ async function saveProfile() {
   saving.value = true
   saveError.value = ''
   notice.value = ''
+  clearErrors()
   const body = {
     kind: props.kind,
     id: form.id,
@@ -381,6 +458,8 @@ async function saveProfile() {
     saving.value = false
   }
 }
+
+defineExpose({ show, hide, openManager })
 </script>
 
 <style scoped>
@@ -389,22 +468,53 @@ async function saveProfile() {
   max-width: 100%;
 }
 
+.manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--boms-space-2);
+}
+
+.manager-title {
+  margin: 0;
+  color: var(--boms-color-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: normal;
+}
+
+.manager-banner--success {
+  background: var(--boms-color-success-bg);
+  color: var(--boms-color-success-text);
+}
+
+.manager-banner--danger {
+  background: var(--boms-color-danger-bg);
+  color: var(--boms-color-danger-text);
+}
+
+.manager-banner--warning {
+  background: var(--boms-color-warning-bg);
+  color: var(--boms-color-warning-text);
+}
+
 .partner-filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
-  gap: 12px;
+  gap: var(--boms-space-3);
 }
 
 .partner-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: 14px;
+  gap: var(--boms-space-3);
 }
 
 .partner-profile-card {
-  border: 1px solid #eadfce;
-  border-radius: 16px;
-  padding: 16px;
+  border: 1px solid var(--boms-color-border);
+  border-radius: var(--boms-radius-md);
+  padding: var(--boms-space-3) var(--boms-space-4);
   min-width: 0;
 }
 
@@ -413,10 +523,18 @@ async function saveProfile() {
   overflow-wrap: anywhere;
 }
 
+.partner-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+
 .profile-details {
   display: grid;
-  gap: 4px;
-  color: #6f6254;
+  gap: var(--boms-space-1);
+  color: var(--boms-color-text-muted);
   overflow-wrap: anywhere;
 }
 

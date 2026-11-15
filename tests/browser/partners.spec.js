@@ -144,7 +144,15 @@ for (const width of [375, 1280])
     await page
       .getByRole('button', { name: 'Save supplier', exact: true })
       .click()
-    await expect(page.getByText('This field is required.')).toBeVisible()
+    // MF-10: the summary lists the error and focus moves to the first field.
+    await expect(
+      page
+        .getByRole('alert')
+        .getByRole('link', { name: 'Supplier name: This field is required.' })
+    ).toBeVisible()
+    await expect(
+      page.getByLabel('Supplier name', { exact: true })
+    ).toBeFocused()
     expect(requests).toHaveLength(0)
     await page
       .getByLabel('Supplier name', { exact: true })

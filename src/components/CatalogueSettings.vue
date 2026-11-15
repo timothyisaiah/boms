@@ -1,28 +1,41 @@
 <template>
-  <q-card flat class="surface-card q-mt-lg"
-    ><q-card-section>
-      <h2 class="section-title">Variant prices and recipe defaults</h2>
-      <p
-        >One selling price per variant, with an effective date. Recorded
-        reconciliations keep their original price.</p
-      >
-      <q-banner v-if="error" class="bg-orange-1" role="alert">{{
-        error
-      }}</q-banner>
-      <q-linear-progress v-if="loading" indeterminate />
-      <q-expansion-item
-        label="Set a variant price"
-        default-opened
-        expand-separator
-      >
+  <div class="catalogue-settings">
+    <WorkspaceState
+      display="banner"
+      skeleton
+      :mode="ws.mode.value"
+      :error="ws.error.value"
+      :last-loaded-at="ws.lastLoadedAt.value"
+      retry-label="Retry loading settings"
+      @retry="load"
+    />
+
+    <div class="catalogue-settings__sections">
+      <section class="catalogue-section" aria-labelledby="price-section-title">
+        <h2 id="price-section-title" class="section-title"
+          >Set a variant price</h2
+        >
+        <p class="catalogue-section__intro"
+          >One selling price per variant, with an effective date. Recorded
+          reconciliations keep their original price.</p
+        >
         <WriteStatus action="prices" @saved="load" />
-        <q-form @submit="savePrice" class="q-gutter-md q-py-md">
+        <q-form
+          ref="priceFormRef"
+          class="q-gutter-md"
+          greedy
+          no-error-focus
+          @submit="savePrice"
+          @validation-error="onPriceInvalid"
+        >
+          <FormErrorSummary ref="priceSummaryRef" :errors="priceErrors" />
           <q-select
             v-model="price.variantId"
             outlined
+            for="price-variant"
             emit-value
             map-options
-            behavior="dialog"
+            :behavior="selectBehavior"
             :options="variants"
             :disable="locked('prices')"
             :rules="[required]"
@@ -31,6 +44,7 @@
           <q-input
             v-model="price.unitPrice"
             outlined
+            for="price-amount"
             type="number"
             inputmode="decimal"
             min="0"
@@ -42,30 +56,52 @@
           <q-input
             v-model="price.effectiveOn"
             outlined
+            for="price-effective"
             type="date"
             :disable="locked('prices')"
             :rules="[required]"
             label="Effective from"
           />
-          <q-btn
-            type="submit"
-            color="primary"
-            no-caps
-            label="Save price"
-            :disable="locked('prices')"
-          />
+          <div>
+            <q-btn
+              type="submit"
+              color="primary"
+              no-caps
+              unelevated
+              label="Save price"
+              :disable="locked('prices')"
+            />
+          </div>
         </q-form>
+        <h3 class="catalogue-section__subtitle">Price history</h3>
         <ReportList :rows="priceHistory" :columns="priceColumns" />
-      </q-expansion-item>
-      <q-expansion-item label="Production recipe defaults" expand-separator>
+      </section>
+
+      <section class="catalogue-section" aria-labelledby="recipe-section-title">
+        <h2 id="recipe-section-title" class="section-title"
+          >Production recipe defaults</h2
+        >
+        <p class="catalogue-section__intro"
+          >Default materials per jar, used to prefill new production batches.
+          Actual batch quantities remain editable.</p
+        >
         <WriteStatus action="recipes" @saved="load" />
-        <q-form @submit="saveRecipe" class="q-gutter-md q-py-md">
+        <q-form
+          ref="recipeFormRef"
+          class="q-gutter-md"
+          greedy
+          no-error-focus
+          @submit="saveRecipe"
+          @validation-error="onRecipeInvalid"
+        >
+          <FormErrorSummary ref="recipeSummaryRef" :errors="recipeErrors" />
           <q-select
             v-model="recipe.variantId"
             outlined
+            for="recipe-variant"
             emit-value
             map-options
-            behavior="dialog"
+            :behavior="selectBehavior"
             :options="variants"
             :disable="locked('recipes')"
             :rules="[required]"
@@ -75,6 +111,7 @@
           <q-input
             v-model="recipe.name"
             outlined
+            for="recipe-name"
             label="Recipe name"
             :disable="locked('recipes')"
             :rules="[required]"
@@ -87,17 +124,21 @@
             <q-select
               v-model="item.materialId"
               outlined
+              :for="`recipe-material-${index}`"
               emit-value
               map-options
-              behavior="dialog"
+              :behavior="selectBehavior"
               :options="materials"
               :disable="locked('recipes')"
               :rules="[required]"
-              label="Material"
+              :label="
+                recipe.items.length > 1 ? `Material ${index + 1}` : 'Material'
+              "
             />
             <q-input
               v-model="item.quantityPerUnit"
               outlined
+              :for="`recipe-quantity-${index}`"
               type="number"
               inputmode="decimal"
               min="0.000001"
@@ -105,7 +146,7 @@
               :disable="locked('recipes')"
               :rules="[positive]"
               label="Quantity per jar"
-              hint="In the material's unit (kg or pieces). Actual batch quantities remain editable."
+              hint="In the material's unit (kg or pieces)."
             />
             <q-btn
               v-if="recipe.items.length > 1"
@@ -113,50 +154,86 @@
               icon="delete"
               label="Remove material"
               no-caps
+              :aria-label="`Remove material ${index + 1}`"
               :disable="locked('recipes')"
               @click="recipe.items.splice(index, 1)"
             />
           </article>
-          <q-btn
-            flat
-            no-caps
-            icon="add"
-            label="Add material"
-            :disable="locked('recipes')"
-            @click="
-              recipe.items.push({ materialId: null, quantityPerUnit: '' })
-            "
-          />
-          <q-btn
-            type="submit"
-            color="primary"
-            no-caps
-            label="Save recipe"
-            :disable="locked('recipes')"
-          />
+          <div class="catalogue-section__actions">
+            <q-btn
+              flat
+              no-caps
+              icon="add"
+              label="Add material"
+              :disable="locked('recipes')"
+              @click="
+                recipe.items.push({ materialId: null, quantityPerUnit: '' })
+              "
+            />
+            <q-btn
+              type="submit"
+              color="primary"
+              no-caps
+              unelevated
+              label="Save recipe"
+              :disable="locked('recipes')"
+            />
+          </div>
         </q-form>
-      </q-expansion-item> </q-card-section
-  ></q-card>
+      </section>
+    </div>
+  </div>
 </template>
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
+import { useQuasar } from 'quasar'
 import { apiRequest } from '@/lib/api'
 import { isWriteLocked, writeAction } from '@/services/writes'
 import { required, positive, nonnegative } from '@/lib/validation'
+import { getTodayString } from '@/lib/format'
+import { useWorkspace } from '@/composables/useWorkspace'
+import { collectFieldErrors, useFormErrors } from '@/composables/useFormErrors'
+import FormErrorSummary from './FormErrorSummary.vue'
+import WorkspaceState from './WorkspaceState.vue'
 import WriteStatus from './WriteStatus.vue'
 import ReportList from './ReportList.vue'
-const workspace = ref({
-    variants: [],
-    materials: [],
-    pricing: [],
-    recipes: []
-  }),
-  error = ref(''),
-  loading = ref(true)
-const today = new Date().toLocaleDateString('en-CA', {
-  timeZone: 'Africa/Kampala'
+
+const $q = useQuasar()
+// MF-17: touch-friendly dialog pickers on phones, keyboard menus elsewhere.
+const selectBehavior = computed(() => ($q.screen.lt.sm ? 'dialog' : 'menu'))
+const emptySettings = () => ({
+  variants: [],
+  materials: [],
+  pricing: [],
+  recipes: []
 })
-const price = reactive({ variantId: null, unitPrice: '', effectiveOn: today })
+const ws = useWorkspace(
+  ({ signal }) => apiRequest('workspace?name=settings', { signal }),
+  { initialData: emptySettings() }
+)
+const workspace = computed(() => ws.data.value ?? emptySettings())
+const load = () => ws.load()
+
+const priceFormRef = ref(null)
+const recipeFormRef = ref(null)
+const {
+  errors: priceErrors,
+  summaryRef: priceSummaryRef,
+  fail: failPrice,
+  clear: clearPriceErrors
+} = useFormErrors()
+const {
+  errors: recipeErrors,
+  summaryRef: recipeSummaryRef,
+  fail: failRecipe,
+  clear: clearRecipeErrors
+} = useFormErrors()
+
+const price = reactive({
+  variantId: null,
+  unitPrice: '',
+  effectiveOn: getTodayString()
+})
 const recipe = reactive({
   variantId: null,
   name: '',
@@ -191,17 +268,14 @@ const priceColumns = [
     date: true
   }
 ]
-const locked = action => loading.value || isWriteLocked(action)
-async function load() {
-  loading.value = true
-  try {
-    workspace.value = await apiRequest('workspace?name=settings')
-    error.value = ''
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
+const locked = action => ws.isLoading.value || isWriteLocked(action)
+async function onPriceInvalid() {
+  await nextTick()
+  await failPrice(collectFieldErrors(priceFormRef))
+}
+async function onRecipeInvalid() {
+  await nextTick()
+  await failRecipe(collectFieldErrors(recipeFormRef))
 }
 function selectRecipe() {
   const saved = workspace.value.recipes.find(
@@ -215,6 +289,7 @@ function selectRecipe() {
 }
 async function savePrice() {
   if (locked('prices')) return
+  clearPriceErrors()
   try {
     await writeAction('prices', {
       variantId: price.variantId,
@@ -228,6 +303,7 @@ async function savePrice() {
 }
 async function saveRecipe() {
   if (locked('recipes')) return
+  clearRecipeErrors()
   try {
     await writeAction('recipes', JSON.parse(JSON.stringify(recipe)))
     await load()
@@ -235,5 +311,38 @@ async function saveRecipe() {
     /* WriteStatus shows the failure. */
   }
 }
-onMounted(load)
+
+defineExpose({ reload: load })
 </script>
+<style scoped>
+.catalogue-settings__sections {
+  display: grid;
+  gap: var(--boms-space-6);
+}
+.catalogue-section {
+  min-width: 0;
+}
+.catalogue-section__intro {
+  margin: var(--boms-space-1) 0 var(--boms-space-3);
+  color: var(--boms-color-text-muted);
+}
+.catalogue-section__subtitle {
+  margin: var(--boms-space-6) 0 var(--boms-space-2);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+.catalogue-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--boms-space-2);
+}
+@media (min-width: 1024px) {
+  .catalogue-settings__sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+</style>
