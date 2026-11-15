@@ -1,3 +1,14 @@
+import { DESTINATIONS } from '../constants/capabilities.js'
+
+const pages = {
+  dashboard: () => import('@/pages/IndexPage.vue'),
+  operations: () => import('@/pages/OperationsPage.vue'),
+  retail: () => import('@/pages/RetailPage.vue'),
+  finance: () => import('@/pages/FinancePage.vue'),
+  settings: () => import('@/pages/SettingsPage.vue'),
+  admin: () => import('@/pages/AdminPage.vue')
+}
+
 const routes = [
   {
     path: '/auth',
@@ -21,66 +32,18 @@ const routes = [
       requiresAuth: true
     },
     children: [
-      {
-        path: '',
-        name: 'dashboard',
-        component: () => import('@/pages/IndexPage.vue'),
+      ...DESTINATIONS.map(destination => ({
+        path: destination.path.slice(1),
+        name: destination.name,
+        component: pages[destination.name],
         meta: {
-          title: 'Dashboard'
+          title: destination.title,
+          // Derived from the capability matrix; the guard in index.js enforces it.
+          ...(destination.anyAuthenticated
+            ? {}
+            : { allowedRoles: destination.roles })
         }
-      },
-      {
-        path: 'operations',
-        name: 'operations',
-        component: () => import('@/pages/OperationsPage.vue'),
-        meta: {
-          title: 'Operations',
-          allowedRoles: [
-            'admin_owner',
-            'operations_manager',
-            'production_staff',
-            'warehouse_staff'
-          ]
-        }
-      },
-      {
-        path: 'retail',
-        name: 'retail',
-        component: () => import('@/pages/RetailPage.vue'),
-        meta: {
-          title: 'Distribution',
-          allowedRoles: [
-            'admin_owner',
-            'operations_manager',
-            'warehouse_staff',
-            'sales_or_distribution_staff',
-            'finance_accountant'
-          ]
-        }
-      },
-      {
-        path: 'finance',
-        name: 'finance',
-        component: () => import('@/pages/FinancePage.vue'),
-        meta: {
-          title: 'Finance',
-          allowedRoles: [
-            'admin_owner',
-            'operations_manager',
-            'finance_accountant',
-            'read_only_management'
-          ]
-        }
-      },
-      {
-        path: 'admin',
-        name: 'admin',
-        component: () => import('@/pages/AdminPage.vue'),
-        meta: {
-          title: 'Access and settings',
-          allowedRoles: ['admin_owner']
-        }
-      },
+      })),
       {
         path: 'access-denied',
         name: 'access-denied',

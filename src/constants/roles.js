@@ -51,20 +51,5 @@ export function hasAllowedRole(role, allowedRoles = []) {
   return allowedRoles.map(normalizeRole).includes(normalizedRole)
 }
 
-export function getDefaultRouteForRole(role) {
-  switch (normalizeRole(role)) {
-    case 'production_staff':
-    case 'warehouse_staff':
-      return '/operations'
-
-    case 'sales_or_distribution_staff':
-      return '/retail'
-
-    case 'finance_accountant':
-    case 'read_only_management':
-      return '/finance'
-
-    default:
-      return '/'
-  }
-}
+// Landing routes live with the rest of the role policy.
+export { defaultRouteForRole as getDefaultRouteForRole } from './capabilities.js'
