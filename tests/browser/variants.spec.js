@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test'
 import { validateAction } from '../../server/validation.ts'
 
+async function openVariantManager(page, label = 'Manage variants') {
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await page.locator('.q-menu .q-item').filter({ hasText: label }).click()
+}
+
+async function openVariantCreator(page) {
+  await openVariantManager(page)
+  await page.getByRole('button', { name: 'Add variant', exact: true }).click()
+}
+
 async function fixtures(page, role = 'admin_owner') {
   const variants = [],
     products = [],
@@ -135,7 +145,7 @@ for (const width of [375, 1280])
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     await page.goto('/#/operations')
-    await page.getByRole('button', { name: 'Add variant', exact: true }).click()
+    await openVariantCreator(page)
     await page
       .getByRole('button', { name: 'Save variant', exact: true })
       .click()
@@ -181,10 +191,10 @@ for (const width of [375, 1280])
       page.getByLabel('Variant name', { exact: true })
     ).toBeDisabled()
     await page.reload()
-    await page.getByRole('button', { name: 'Add variant', exact: true }).click()
-    await expect(page.getByLabel('Variant name', { exact: true })).toHaveValue(
-      'Classic honey 500g'
-    )
+    await openVariantManager(page)
+    await expect(
+      page.getByRole('button', { name: 'Retry saved submission' })
+    ).toBeVisible()
     await page.getByRole('button', { name: 'Retry saved submission' }).click()
     await expect(
       page.getByText(
@@ -217,9 +227,7 @@ for (const width of [375, 1280])
       page.getByText('Finished variant', { exact: true })
     ).toBeVisible()
     expect(variants.filter(variant => variant.is_active)).toHaveLength(0)
-    await page
-      .getByRole('button', { name: 'Manage variants', exact: true })
-      .click()
+    await openVariantManager(page)
     await page.getByLabel('Variant status', { exact: true }).click()
     await page
       .getByRole('option')
@@ -232,9 +240,13 @@ for (const width of [375, 1280])
       })
       .click()
     await page.getByLabel('Variant active', { exact: true }).click()
+    const workspaceRefreshed = page.waitForResponse(response =>
+      response.url().includes('/api/workspace')
+    )
     await page
       .getByRole('button', { name: 'Save variant', exact: true })
       .click()
+    await workspaceRefreshed
     await expect(manager.getByText('Active', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Close variant manager' }).click()
     await page.getByLabel('Finished variant', { exact: true }).click()
@@ -246,7 +258,7 @@ for (const width of [375, 1280])
     await expect(
       page.getByLabel('Finished variant', { exact: true })
     ).toHaveValue('HNY-500-CL / Classic honey 500 gram jar')
-    await page.getByRole('button', { name: 'Add variant', exact: true }).click()
+    await openVariantCreator(page)
     await page.getByLabel('Product', { exact: true }).click()
     await page
       .getByRole('option')
@@ -279,9 +291,7 @@ test('production staff can view variants but cannot add or edit them', async ({
   await expect(
     page.getByRole('button', { name: 'Add variant', exact: true })
   ).toHaveCount(0)
-  await page
-    .getByRole('button', { name: 'Manage variants', exact: true })
-    .click()
+  await openVariantManager(page, 'View variants')
   await expect(
     page.getByLabel('Search variants', { exact: true })
   ).toBeVisible()

@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test'
 import { validateAction } from '../../server/validation.ts'
 
+async function openMaterialManager(page, label = 'Manage materials') {
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await page.locator('.q-menu .q-item').filter({ hasText: label }).click()
+}
+
+async function openMaterialCreator(page) {
+  await openMaterialManager(page)
+  await page.getByRole('button', { name: 'Add material', exact: true }).click()
+}
+
 async function fixtures(page, role = 'admin_owner') {
   const materials = [],
     requests = [],
@@ -100,9 +110,7 @@ for (const width of [375, 1280])
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     await page.goto('/#/operations')
-    await page
-      .getByRole('button', { name: 'Add material', exact: true })
-      .click()
+    await openMaterialCreator(page)
     await page
       .getByRole('button', { name: 'Save material', exact: true })
       .click()
@@ -135,12 +143,10 @@ for (const width of [375, 1280])
     ).toBeDisabled()
     // A committed write with a lost response survives reload without duplicating it.
     await page.reload()
-    await page
-      .getByRole('button', { name: 'Add material', exact: true })
-      .click()
-    await expect(page.getByLabel('Material name', { exact: true })).toHaveValue(
-      '500g glass jar'
-    )
+    await openMaterialManager(page)
+    await expect(
+      page.getByRole('button', { name: 'Retry saved submission' })
+    ).toBeVisible()
     await page.getByRole('button', { name: 'Retry saved submission' }).click()
     await expect(
       page.getByText('Material saved.', { exact: true })
@@ -177,9 +183,7 @@ for (const width of [375, 1280])
     await page.getByRole('tab', { name: 'Receipt form' }).click()
     await expect(page.getByText('Material', { exact: true })).toBeVisible()
     expect(materials.filter(material => material.is_active)).toHaveLength(0)
-    await page
-      .getByRole('button', { name: 'Manage materials', exact: true })
-      .click()
+    await openMaterialManager(page)
     await page.getByLabel('Material status', { exact: true }).click()
     await page
       .getByRole('option')
@@ -189,9 +193,13 @@ for (const width of [375, 1280])
       .getByRole('button', { name: 'Edit 500g jar and lid', exact: true })
       .click()
     await page.getByLabel('Material active', { exact: true }).click()
+    const workspaceRefreshed = page.waitForResponse(response =>
+      response.url().includes('/api/workspace')
+    )
     await page
       .getByRole('button', { name: 'Save material', exact: true })
       .click()
+    await workspaceRefreshed
     await expect(manager.getByText('Active', { exact: true })).toBeVisible()
     await page.screenshot({
       path: `.tmp/materials-${width}.png`,
@@ -201,15 +209,13 @@ for (const width of [375, 1280])
     await page.getByLabel('Material', { exact: true }).click()
     await page
       .getByRole('option')
-      .filter({ hasText: '500g jar and lid (pieces)' })
+      .filter({ hasText: '500g jar and lid / pieces' })
       .click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(page.getByLabel('Material', { exact: true })).toHaveValue(
-      '500g jar and lid (pieces)'
+      '500g jar and lid / pieces'
     )
-    await page
-      .getByRole('button', { name: 'Add material', exact: true })
-      .click()
+    await openMaterialCreator(page)
     await page.getByLabel('Material code', { exact: true }).fill('jar-500')
     await page.getByLabel('Material name', { exact: true }).fill('Duplicate')
     await page
@@ -243,9 +249,7 @@ test('production staff can view materials but cannot create or edit them', async
   await expect(
     page.getByRole('button', { name: 'Add material', exact: true })
   ).toHaveCount(0)
-  await page
-    .getByRole('button', { name: 'Manage materials', exact: true })
-    .click()
+  await openMaterialManager(page, 'View materials')
   await expect(
     page.getByLabel('Search materials', { exact: true })
   ).toBeVisible()
