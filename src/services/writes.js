@@ -3,6 +3,10 @@ import { apiRequest, ApiError } from '@/lib/api'
 export const writeStates = reactive({})
 let identity = ''
 const storeKey = action => `boms:pending:${identity}:${action}`
+/** Authenticated user id that scopes session storage (writes and drafts). */
+export function getWriteIdentity() {
+  return identity
+}
 export function setWriteIdentity(id) {
   identity = id ?? ''
   for (const key of Object.keys(writeStates)) delete writeStates[key]

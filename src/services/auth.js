@@ -2,6 +2,11 @@ import { reactive, readonly } from 'vue'
 import { getDefaultRouteForRole } from '@/constants/roles'
 import { apiRequest } from '@/lib/api'
 import { setWriteIdentity } from '@/services/writes'
+import {
+  clearDraftsForIdentity,
+  defaultDraftStorage,
+  purgeDrafts
+} from '@/composables/draftStore'
 const state = reactive({
   initialized: false,
   loading: false,
@@ -18,6 +23,8 @@ function sync(user) {
   state.role = user?.role ?? null
   state.session = user ? { user } : null
   setWriteIdentity(user?.id)
+  // A different user on this tab must never see another user's form drafts.
+  if (user?.id) purgeDrafts(defaultDraftStorage(), user.id)
 }
 export function resolveSafeRedirect(target, fallback = '/') {
   return typeof target === 'string' &&
@@ -65,6 +72,7 @@ export async function signOut() {
   state.loading = true
   try {
     await apiRequest('auth?action=logout', { method: 'POST', body: '{}' })
+    clearDraftsForIdentity(defaultDraftStorage(), state.user?.id)
     sync(null)
   } finally {
     state.loading = false

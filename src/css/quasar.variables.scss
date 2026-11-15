@@ -1,16 +1,10 @@
 // Quasar Sass (& SCSS) Variables
 // --------------------------------------------------
-// To customize the look and feel of this app, you can override
-// the Sass/SCSS variables found in Quasar's source Sass/SCSS files.
-
-// Check documentation for full list of Quasar variables
-
-// Your own variables (that are declared here) and Quasar's own
-// ones will be available out of the box in your .vue/.scss/.sass files
-
-// It's highly recommended to change the default colors
-// to match your app's branding.
-// Tip: Use the "Theme Builder" on Quasar's documentation website.
+// Brand and semantic colors for Quasar's color classes (bg-primary,
+// text-negative, ...). These variables are injected into every .vue/.scss
+// file, so this file must only declare variables (no CSS output).
+// Runtime tokens live in app.scss as `--boms-*` custom properties and mirror
+// the values below; see docs/audits/design-system.md and components.md.
 
 $primary: #8a5a1f;
 $secondary: #27543f;
@@ -19,7 +13,33 @@ $accent: #d89a35;
 $dark: #261a0d;
 $dark-page: #f5ede0;
 
-$positive: #21ba45;
-$negative: #c10015;
-$info: #5b87b6;
+// Status colors are used as text and as solid fills with white text, so they
+// are dark enough for 4.5:1 against white. Warning stays amber and is paired
+// with dark text.
+$positive: #1e7a3c;
+$negative: #b42318;
+$info: #2f6690;
 $warning: #e7ac3b;
+
+// Spacing scale (design-system.md "Spacing and shape").
+$boms-space-1: 4px;
+$boms-space-2: 8px;
+$boms-space-3: 12px;
+$boms-space-4: 16px;
+$boms-space-6: 24px;
+$boms-space-8: 32px;
+
+// Radius: controls, cards/rows, major containers/dialogs, pills.
+$boms-radius-sm: 8px;
+$boms-radius-md: 12px;
+$boms-radius-lg: 16px;
+$boms-radius-pill: 999px;
+
+// Breakpoints (Quasar defaults) for SCSS media queries.
+$boms-breakpoint-sm: 600px;
+$boms-breakpoint-md: 1024px;
+$boms-breakpoint-lg: 1440px;
+
+// Touch targets.
+$boms-target-min: 44px;
+$boms-field-min: 48px;
