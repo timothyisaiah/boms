@@ -56,7 +56,11 @@ export default defineConfig(ctx => {
       // minify: false,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      // Keep Vite's dependency cache per checkout so parallel worktrees that
+      // share node_modules do not overwrite each other's pre-bundled deps.
+      extendViteConf(viteConf) {
+        viteConf.cacheDir = '.quasar/vite-cache'
+      },
       // viteVuePluginOptions: {},
 
       // vitePlugins: [
