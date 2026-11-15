@@ -1,0 +1,78 @@
+/* Scoped styles shared by the finance form components (imported with
+   <style scoped src>). */
+.finance-form {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.finance-form__intro {
+  margin-bottom: var(--boms-space-4);
+}
+.finance-form__title {
+  margin: 0;
+}
+.finance-form__lead {
+  margin: var(--boms-space-1) 0 0;
+  color: var(--boms-color-text-muted);
+  line-height: 1.5;
+}
+.finance-form__notice {
+  margin: 0 0 var(--boms-space-4);
+  padding: var(--boms-space-3) var(--boms-space-4);
+  border: 1px solid var(--boms-color-border);
+  border-radius: var(--boms-radius-md);
+  background: var(--boms-color-surface-subtle);
+  color: var(--boms-color-text);
+}
+.finance-form__draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--boms-space-2);
+  margin: 0 0 var(--boms-space-4);
+  padding: var(--boms-space-2) var(--boms-space-3);
+  border: 1px solid var(--boms-color-border);
+  border-radius: var(--boms-radius-md);
+  background: var(--boms-color-info-bg);
+  color: var(--boms-color-info-text);
+}
+.finance-form__draft :deep(.q-icon) {
+  overflow: hidden;
+}
+.finance-form__form {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.finance-form__grid {
+  display: grid;
+  gap: var(--boms-space-2) var(--boms-space-4);
+  grid-template-columns: 1fr;
+}
+.finance-form__lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--boms-space-3);
+  margin-top: var(--boms-space-4);
+}
+.finance-form__add {
+  margin-top: var(--boms-space-3);
+}
+.finance-form__context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--boms-space-2);
+  margin-top: var(--boms-space-2);
+}
+.finance-form__caption {
+  margin: var(--boms-space-2) 0 0;
+  color: var(--boms-color-text-muted);
+  font-size: var(--boms-font-size-caption);
+  line-height: 1.5;
+}
+
+@media (min-width: 768px) {
+  .finance-form__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
