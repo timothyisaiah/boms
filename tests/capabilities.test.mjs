@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import * as server from '../server/auth.ts'
 import { workspaceRoles } from '../server/workspaces.ts'
+import { access } from '../server/projections.ts'
 import routes from '../src/router/routes.js'
 import {
   API_READ_ROLES,
@@ -30,29 +31,7 @@ const sorted = roles => [...roles].sort()
 const same = (actual, expected, message) =>
   assert.deepEqual(sorted(actual), sorted(expected), message)
 
-// `access` (per-projection read rules) is module-private in
-// server/workspaces.ts, so read it from source. Fails loudly if the shape
-// changes rather than silently passing.
-const workspaceSource = readFileSync('server/workspaces.ts', 'utf8')
-const accessBlock = workspaceSource.match(
-  /const access[^=]*=\s*\{([\s\S]*?)\n\}/
-)?.[1]
-assert.ok(accessBlock, 'server/workspaces.ts no longer declares `access`')
-const roleSetByName = {
-  ALL_ROLES: server.ALL_ROLES,
-  SUPPLY: server.SUPPLY,
-  RETAIL: server.RETAIL,
-  REVIEW: server.REVIEW,
-  FINANCE: server.FINANCE
-}
-const access = Object.fromEntries(
-  [...accessBlock.matchAll(/^\s*(\w+):\s*(\w+),?\s*$/gm)].map(
-    ([, key, set]) => {
-      assert.ok(roleSetByName[set], `unknown role set ${set} for ${key}`)
-      return [key, roleSetByName[set]]
-    }
-  )
-)
+// Per-projection read rules, exported by server/projections.ts.
 
 // Routes hidden from a role although the API would let it read the workspace.
 // Pending owner decision: see docs/audits/capability-matrix.md.
