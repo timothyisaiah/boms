@@ -1,48 +1,25 @@
-import { hasAllowedRole } from '@/constants/roles'
+import { can } from '@/constants/capabilities'
 import { apiRequest } from '@/lib/api'
+import { asNumber, formatMoney, formatQuantity } from '@/lib/format'
 
-const SUPPLY_ROLES = [
-  'admin_owner',
-  'operations_manager',
-  'production_staff',
-  'warehouse_staff',
-  'finance_accountant',
-  'read_only_management'
-]
-
-const PRODUCTION_ROLES = [
-  'admin_owner',
-  'operations_manager',
-  'production_staff',
-  'warehouse_staff',
-  'sales_or_distribution_staff',
-  'finance_accountant',
-  'read_only_management'
-]
-
-const RETAIL_ROLES = [
-  'admin_owner',
-  'operations_manager',
-  'warehouse_staff',
-  'sales_or_distribution_staff',
-  'finance_accountant',
-  'read_only_management'
-]
-
-const REVIEW_ROLES = [
-  'admin_owner',
-  'operations_manager',
-  'sales_or_distribution_staff',
-  'finance_accountant',
-  'read_only_management'
-]
-
-const EXPENSE_ROLES = [
-  'admin_owner',
-  'operations_manager',
-  'finance_accountant',
-  'read_only_management'
-]
+// Which dashboard projections a role may see. Each flag mirrors the server
+// role set that gates the matching projection in server/projections.ts, read
+// through the capability matrix (src/constants/capabilities.js):
+//   supply     SUPPLY  (purchases, material lots)     = read:operations
+//   production ALL     (batches, warehouse stock)      = read:dashboard
+//   retail     RETAIL  (stock issues)                  = read:retail
+//   review     REVIEW  (reconciliations, balances)     = read:finance
+//   expenses   FINANCE (expenses, net result)          = route:finance
+export function getDashboardAccess(role) {
+  return {
+    supply: can(role, 'read:operations'),
+    production: can(role, 'read:dashboard'),
+    retail: can(role, 'read:retail'),
+    review: can(role, 'read:finance'),
+    expenses: can(role, 'route:finance'),
+    admin: can(role, 'admin:users')
+  }
+}
 
 const MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -54,12 +31,6 @@ const MONTH_SHORT_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   timeZone: 'UTC'
 })
-
-function asNumber(value) {
-  const parsedValue = Number(value)
-
-  return Number.isFinite(parsedValue) ? parsedValue : 0
-}
 
 function roundCurrency(value) {
   return Math.round(asNumber(value) * 100) / 100
@@ -135,21 +106,10 @@ function createMonthSummary(month) {
   }
 }
 
-function getDashboardAccess(role) {
-  return {
-    supply: hasAllowedRole(role, SUPPLY_ROLES),
-    production: hasAllowedRole(role, PRODUCTION_ROLES),
-    retail: hasAllowedRole(role, RETAIL_ROLES),
-    review: hasAllowedRole(role, REVIEW_ROLES),
-    expenses: hasAllowedRole(role, EXPENSE_ROLES),
-    admin: hasAllowedRole(role, ['admin_owner'])
-  }
-}
-
 function createRetailerState(balance) {
   if (asNumber(balance.outstanding_amount) > 0) {
     return {
-      label: 'Collect',
+      label: 'Payment due',
       tone: 'warning'
     }
   }
@@ -157,7 +117,7 @@ function createRetailerState(balance) {
   if (asNumber(balance.remaining_quantity) > 0) {
     return {
       label: 'In store',
-      tone: 'positive'
+      tone: 'success'
     }
   }
 
@@ -514,7 +474,6 @@ function buildLiveWorkspace({
     .map(mapRetailerWatchlist)
 
   return {
-    mode: 'live',
     access,
     currentMonthKey: monthSummaries[monthSummaries.length - 1]?.key ?? null,
     months: monthSummaries,
@@ -537,31 +496,533 @@ function buildLiveWorkspace({
   }
 }
 
-export function getPreviewDashboardWorkspace(role) {
-  return {
-    ...buildLiveWorkspace({
-      access: getDashboardAccess(role),
-      months: buildMonthTimeline(6),
-      purchases: [],
-      inventoryLots: [],
-      batches: [],
-      productionOutputs: [],
-      stockIssues: [],
-      retailers: [],
-      reconciliations: [],
-      remittances: [],
-      retailerBalances: [],
-      openIssueLines: [],
-      expenses: []
-    }),
-    mode: 'unavailable'
-  }
+/**
+ * Template shape before the first successful load. It is never presented as
+ * data: IndexPage shows skeletons until `useWorkspace` reports a success.
+ */
+export function createEmptyDashboardWorkspace(role) {
+  return buildLiveWorkspace({
+    access: getDashboardAccess(role),
+    months: buildMonthTimeline(6),
+    purchases: [],
+    inventoryLots: [],
+    batches: [],
+    productionOutputs: [],
+    stockIssues: [],
+    retailers: [],
+    reconciliations: [],
+    remittances: [],
+    retailerBalances: [],
+    openIssueLines: [],
+    expenses: []
+  })
 }
-export async function fetchDashboardWorkspace(role) {
-  const data = await apiRequest('workspace?name=dashboard')
+
+/**
+ * Full dashboard workspace. The dashboard must stay on the full payload: its
+ * six-month totals and activity feed need every history collection, so the
+ * server rejects `view=summary` for it (docs/audits/history-api.md).
+ */
+export async function fetchDashboardWorkspace(role, { signal } = {}) {
+  const data = await apiRequest('workspace?name=dashboard', { signal })
   return buildLiveWorkspace({
     ...data,
     access: getDashboardAccess(role),
     months: buildMonthTimeline(6)
   })
+}
+
+// ---------------------------------------------------------------------------
+// View models. Pure functions of a built workspace, so IndexPage and the
+// components in src/components/dashboard/ only arrange them.
+// ---------------------------------------------------------------------------
+
+const jars = value => `${formatQuantity(value)} jars`
+
+/** Text such as "+UGX 5,000 vs last month" or "No prior month in range". */
+export function compareAgainstPrevious(
+  currentValue,
+  previousValue,
+  type,
+  unit = ''
+) {
+  if (previousValue == null) {
+    return 'No prior month in range'
+  }
+
+  const difference = roundCurrency(
+    asNumber(currentValue) - asNumber(previousValue)
+  )
+
+  if (difference === 0) {
+    return 'Flat vs last month'
+  }
+
+  const prefix = difference > 0 ? '+' : '-'
+  const absoluteDifference = Math.abs(difference)
+
+  if (type === 'currency') {
+    return `${prefix}${formatMoney(absoluteDifference)} vs last month`
+  }
+
+  return `${prefix}${formatQuantity(absoluteDifference)} ${unit} vs last month`
+}
+
+/** The month the dashboard is focused on and the one before it. */
+export function getMonthContext(workspace, monthKey) {
+  const months = workspace.months
+  const index = months.findIndex(month => month.key === monthKey)
+  const resolvedIndex = index === -1 ? months.length - 1 : index
+
+  return {
+    month: months[resolvedIndex] ?? null,
+    previousMonth: resolvedIndex > 0 ? months[resolvedIndex - 1] : null
+  }
+}
+
+/**
+ * The four decision figures for the role, shown as the compact metric strip.
+ * Each item is `{ label, value, hint }`.
+ */
+export function buildMetricStrip(workspace, month, previousMonth) {
+  if (!month) {
+    return []
+  }
+
+  const { access, snapshot } = workspace
+
+  if (access.review && access.expenses) {
+    return [
+      {
+        label: 'Recognized sales',
+        value: formatMoney(month.salesValue),
+        hint: compareAgainstPrevious(
+          month.salesValue,
+          previousMonth?.salesValue,
+          'currency'
+        )
+      },
+      {
+        label: 'Cash received',
+        value: formatMoney(month.remittedAmount),
+        hint: compareAgainstPrevious(
+          month.remittedAmount,
+          previousMonth?.remittedAmount,
+          'currency'
+        )
+      },
+      {
+        label: 'Net result',
+        value: formatMoney(month.netProfit),
+        hint: `${formatMoney(month.expenseAmount)} in operating expenses`
+      },
+      {
+        label: 'Collections open now',
+        value: formatMoney(snapshot.outstandingAmount),
+        hint: `${snapshot.retailersWithOutstanding} retailers need follow-up`
+      }
+    ]
+  }
+
+  if (access.review) {
+    return [
+      {
+        label: 'Recognized sales',
+        value: formatMoney(month.salesValue),
+        hint: `${jars(month.soldQuantity)} sold in review`
+      },
+      {
+        label: 'Cash received',
+        value: formatMoney(month.remittedAmount),
+        hint: compareAgainstPrevious(
+          month.remittedAmount,
+          previousMonth?.remittedAmount,
+          'currency'
+        )
+      },
+      {
+        label: 'Stock issued',
+        value: jars(month.issuedQuantity),
+        hint: `${formatQuantity(month.stockIssueCount)} dispatch records posted`
+      },
+      {
+        label: 'Collections open now',
+        value: formatMoney(snapshot.outstandingAmount),
+        hint: `${snapshot.retailersWithOutstanding} retailers still open`
+      }
+    ]
+  }
+
+  if (access.retail) {
+    return [
+      {
+        label: 'Stock issued',
+        value: jars(month.issuedQuantity),
+        hint: compareAgainstPrevious(
+          month.issuedQuantity,
+          previousMonth?.issuedQuantity,
+          'quantity',
+          'jars'
+        )
+      },
+      {
+        label: 'Open finished stock',
+        value: jars(snapshot.openWarehouseQuantity),
+        hint: `${formatMoney(snapshot.openWarehouseValue)} at current batch cost`
+      },
+      {
+        label: 'Stock in partner stores',
+        value: jars(snapshot.openRetailQuantity),
+        hint: `${formatMoney(snapshot.openRetailValue)} still out in market`
+      },
+      {
+        label: 'Active retailers',
+        value: formatQuantity(snapshot.activeRetailers),
+        hint: `${formatQuantity(month.stockIssueCount)} dispatches posted in the month`
+      }
+    ]
+  }
+
+  return [
+    {
+      label: 'Material spend',
+      value: formatMoney(month.purchasesAmount),
+      hint: `${formatQuantity(month.purchasesCount)} receipts recorded`
+    },
+    {
+      label: 'Completed batches',
+      value: formatQuantity(month.batchesCompleted),
+      hint: compareAgainstPrevious(
+        month.batchesCompleted,
+        previousMonth?.batchesCompleted,
+        'quantity',
+        'batches'
+      )
+    },
+    {
+      label: 'Jars packed',
+      value: jars(month.outputQuantity),
+      hint: compareAgainstPrevious(
+        month.outputQuantity,
+        previousMonth?.outputQuantity,
+        'quantity',
+        'jars'
+      )
+    },
+    {
+      label: 'Open material lots',
+      value: formatQuantity(snapshot.openMaterialLots),
+      hint: `${formatMoney(snapshot.openMaterialValue)} still available for production`
+    }
+  ]
+}
+
+const TREND_COPY = {
+  sales: { title: 'Recognized sales trend', chip: 'Sales', money: true },
+  issued: { title: 'Dispatch trend', chip: 'Dispatch', money: false },
+  output: { title: 'Production output trend', chip: 'Output', money: false },
+  purchases: { title: 'Material spend trend', chip: 'Spend', money: true }
+}
+
+/** Which series the trend shows for the role's access. */
+export function getTrendMode(access) {
+  if (access.review) return 'sales'
+  if (access.retail) return 'issued'
+  if (access.production) return 'output'
+  return 'purchases'
+}
+
+export function getTrendCopy(mode) {
+  return TREND_COPY[mode] ?? TREND_COPY.purchases
+}
+
+export function getTrendValue(mode, month) {
+  switch (mode) {
+    case 'sales':
+      return asNumber(month.salesValue)
+    case 'issued':
+      return asNumber(month.issuedQuantity)
+    case 'output':
+      return asNumber(month.outputQuantity)
+    default:
+      return asNumber(month.purchasesAmount)
+  }
+}
+
+export function formatTrendValue(mode, month) {
+  const value = getTrendValue(mode, month)
+  return getTrendCopy(mode).money ? formatMoney(value) : jars(value)
+}
+
+export function trendMeta(mode, month) {
+  switch (mode) {
+    case 'sales':
+      return `${jars(month.soldQuantity)} sold`
+    case 'issued':
+      return `${formatQuantity(month.stockIssueCount)} dispatches`
+    case 'output':
+      return `${formatQuantity(month.batchesCompleted)} completed batches`
+    default:
+      return `${formatQuantity(month.purchasesCount)} receipts`
+  }
+}
+
+export function trendComparison(mode, month, previousMonth) {
+  if (!month) {
+    return 'No month selected'
+  }
+
+  const money = getTrendCopy(mode).money
+  return compareAgainstPrevious(
+    getTrendValue(mode, month),
+    previousMonth ? getTrendValue(mode, previousMonth) : null,
+    money ? 'currency' : 'quantity',
+    money ? '' : 'jars'
+  )
+}
+
+/** Supporting figures beside the selected trend month. */
+export function buildTrendFocusStats(mode, month, snapshot) {
+  if (!month) {
+    return []
+  }
+
+  switch (mode) {
+    case 'sales':
+      return [
+        { label: 'Gross profit', value: formatMoney(month.grossProfit) },
+        { label: 'Cash received', value: formatMoney(month.remittedAmount) },
+        { label: 'Open in stores', value: jars(month.remainingQuantity) }
+      ]
+    case 'issued':
+      return [
+        { label: 'Dispatches', value: formatQuantity(month.stockIssueCount) },
+        {
+          label: 'Open retail stock',
+          value: jars(snapshot.openRetailQuantity)
+        },
+        { label: 'Retail value', value: formatMoney(snapshot.openRetailValue) }
+      ]
+    case 'output':
+      return [
+        {
+          label: 'Completed batches',
+          value: formatQuantity(month.batchesCompleted)
+        },
+        { label: 'Material spend', value: formatMoney(month.purchasesAmount) },
+        {
+          label: 'Warehouse stock',
+          value: jars(snapshot.openWarehouseQuantity)
+        }
+      ]
+    default:
+      return [
+        {
+          label: 'Receipts posted',
+          value: formatQuantity(month.purchasesCount)
+        },
+        {
+          label: 'Open lots',
+          value: formatQuantity(snapshot.openMaterialLots)
+        },
+        {
+          label: 'Open lot value',
+          value: formatMoney(snapshot.openMaterialValue)
+        }
+      ]
+  }
+}
+
+/** Monthly review headline figures (at most six). */
+export function buildMonthlyReviewStats(access, month) {
+  if (!month) {
+    return []
+  }
+
+  const stats = []
+
+  if (access.supply) {
+    stats.push({
+      label: 'Material spend',
+      value: formatMoney(month.purchasesAmount),
+      hint: `${formatQuantity(month.purchasesCount)} receipts posted`
+    })
+  }
+
+  if (access.production) {
+    stats.push({
+      label: 'Batches completed',
+      value: formatQuantity(month.batchesCompleted),
+      hint: `${jars(month.outputQuantity)} packed`
+    })
+  }
+
+  if (access.retail) {
+    stats.push({
+      label: 'Stock issued',
+      value: jars(month.issuedQuantity),
+      hint: `${formatQuantity(month.stockIssueCount)} dispatches recorded`
+    })
+  }
+
+  if (access.review) {
+    stats.push(
+      {
+        label: 'Sales recognized',
+        value: formatMoney(month.salesValue),
+        hint: `${jars(month.soldQuantity)} sold`
+      },
+      {
+        label: 'Cash received',
+        value: formatMoney(month.remittedAmount),
+        hint: `${formatMoney(Math.max(month.salesValue - month.remittedAmount, 0))} trailing sales`
+      },
+      {
+        label: 'Returns and damage',
+        value: jars(month.returnedQuantity + month.damagedQuantity),
+        hint: `${formatQuantity(month.returnedQuantity)} returned / ${formatQuantity(month.damagedQuantity)} damaged`
+      }
+    )
+  }
+
+  if (access.expenses) {
+    stats.push({
+      label: 'Net result',
+      value: formatMoney(month.netProfit),
+      hint: `${formatMoney(month.expenseAmount)} operating expenses`
+    })
+  }
+
+  return stats.slice(0, 6)
+}
+
+/** "What stands out" notes; `tone` is a status-chip tone. */
+export function buildMonthlyNotes(access, month) {
+  if (!month) {
+    return []
+  }
+
+  const notes = []
+
+  if (access.review) {
+    const cashGap = roundCurrency(month.salesValue - month.remittedAmount)
+
+    if (cashGap > 0) {
+      notes.push({
+        tone: 'warning',
+        title: 'Collection gap',
+        text: `${formatMoney(cashGap)} has not been remitted against the month's recognized sales.`
+      })
+    }
+
+    if (month.returnedQuantity > 0 || month.damagedQuantity > 0) {
+      notes.push({
+        tone: 'neutral',
+        title: 'Stock exceptions',
+        text: `${formatQuantity(month.returnedQuantity)} jars were returned and ${formatQuantity(month.damagedQuantity)} were damaged.`
+      })
+    }
+
+    if (month.remainingQuantity > 0) {
+      notes.push({
+        tone: 'success',
+        title: 'Retail stock still live',
+        text: `${jars(month.remainingQuantity)} remained in stores after review.`
+      })
+    }
+  }
+
+  if (access.production) {
+    notes.push({
+      tone: month.batchesCompleted > 0 ? 'success' : 'neutral',
+      title: 'Production throughput',
+      text:
+        month.batchesCompleted > 0
+          ? `${jars(month.outputQuantity)} were packed across ${formatQuantity(month.batchesCompleted)} completed batches.`
+          : 'No completed batches were posted in this month.'
+    })
+  }
+
+  if (access.supply) {
+    notes.push({
+      tone: 'neutral',
+      title: 'Material intake',
+      text:
+        month.purchasesCount > 0
+          ? `${formatMoney(month.purchasesAmount)} was recorded across ${formatQuantity(month.purchasesCount)} purchase receipts.`
+          : 'No purchase receipts were recorded in this month.'
+    })
+  }
+
+  if (access.expenses) {
+    notes.push({
+      tone: month.netProfit < 0 ? 'danger' : 'success',
+      title: 'Bottom line',
+      text:
+        month.netProfit < 0
+          ? `${formatMoney(Math.abs(month.netProfit))} below break-even after expenses.`
+          : `${formatMoney(month.netProfit)} above break-even after expenses.`
+    })
+  }
+
+  return notes.slice(0, 4)
+}
+
+/** "Core review lines" label/value rows. */
+export function buildMonthlyBreakdown(access, month) {
+  if (!month) {
+    return []
+  }
+
+  const rows = []
+
+  if (access.supply) {
+    rows.push({
+      label: 'Purchase spend',
+      value: formatMoney(month.purchasesAmount)
+    })
+  }
+
+  if (access.production) {
+    rows.push({ label: 'Output quantity', value: jars(month.outputQuantity) })
+  }
+
+  if (access.retail) {
+    rows.push({
+      label: 'Issued to retailers',
+      value: jars(month.issuedQuantity)
+    })
+  }
+
+  if (access.review) {
+    rows.push(
+      { label: 'Recognized sales', value: formatMoney(month.salesValue) },
+      { label: 'Gross profit', value: formatMoney(month.grossProfit) },
+      { label: 'Returned', value: jars(month.returnedQuantity) },
+      { label: 'Damaged', value: jars(month.damagedQuantity) },
+      { label: 'Cash received', value: formatMoney(month.remittedAmount) }
+    )
+  }
+
+  if (access.expenses) {
+    rows.push(
+      { label: 'Operating expenses', value: formatMoney(month.expenseAmount) },
+      { label: 'Net result', value: formatMoney(month.netProfit) }
+    )
+  }
+
+  return rows
+}
+
+/** Activity feed value: money or "<n> jars". */
+export function formatActivityValue(item) {
+  if (item.valueType === 'currency') {
+    return formatMoney(item.value)
+  }
+
+  if (item.valueType === 'quantity') {
+    return `${formatQuantity(item.value)} ${item.valueUnit ?? 'units'}`
+  }
+
+  return ''
 }

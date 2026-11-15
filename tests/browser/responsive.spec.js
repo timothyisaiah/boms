@@ -20,11 +20,7 @@ import {
 // as an expected failure (test.fail) so the suite stays green today and
 // flips to "unexpectedly passed" the moment the defect is fixed — delete the
 // entry then.
-const KNOWN_OVERFLOW = {
-  // MF-01: .dashboard-hero__controls / .dashboard-view-toggle extend past a
-  // 320px viewport (document ≈331px wide).
-  'dashboard@320': 'MF-01 dashboard view toggle overflows at 320px'
-}
+const KNOWN_OVERFLOW = {}
 
 // Routes whose h1 is missing or hidden at some widths. The fits test then
 // waits for `ready` text instead (overflow is still checked) and records an
