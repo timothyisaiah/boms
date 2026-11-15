@@ -46,7 +46,7 @@ export default defineConfig(ctx => {
       // https://v2.quasar.dev/quasar-cli-vite/page-routing-with-vue-router#filename-based-routing
       // filenameBasedRouting: true,
 
-      vueRouterMode: 'hash' // available values: 'hash', 'history'
+      vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
 
       // publicPath: '/',
@@ -60,7 +60,7 @@ export default defineConfig(ctx => {
       // share node_modules do not overwrite each other's pre-bundled deps.
       extendViteConf(viteConf) {
         viteConf.cacheDir = '.quasar/vite-cache'
-      },
+      }
       // viteVuePluginOptions: {},
 
       // vitePlugins: [
