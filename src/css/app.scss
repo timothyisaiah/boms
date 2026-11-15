@@ -3,30 +3,79 @@
 @import '@fontsource/montserrat/800.css';
 
 :root {
+  // Brand palette (kept for recognisability).
   --boms-cream: #fff8eb;
   --boms-honey: #f4c36d;
   --boms-amber: #cc8b2c;
   --boms-cocoa: #4e3620;
   --boms-forest: #234232;
   --boms-ink: #20160d;
-  --boms-shadow: 0 22px 48px rgba(71, 43, 12, 0.12);
   --boms-font-sans: 'Montserrat', 'Segoe UI', 'Helvetica Neue', sans-serif;
+
+  // Semantic color roles (design-system.md "Color roles").
+  --boms-color-primary: #{$primary};
+  --boms-color-on-primary: #ffffff;
+  --boms-color-canvas: #faf5ec;
+  --boms-color-surface: #fffdf8;
+  --boms-color-surface-subtle: #fbf4e8;
+  --boms-color-text: var(--boms-ink);
+  --boms-color-text-muted: #5c4a38;
+  --boms-color-heading: var(--boms-cocoa);
+  --boms-color-border: #e6dac6;
+  --boms-color-border-strong: #c9b597;
+  --boms-color-focus: #{$primary};
+  --boms-color-success: #{$positive};
+  --boms-color-success-bg: #e8f4ec;
+  --boms-color-success-text: #145228;
+  --boms-color-warning: #{$warning};
+  --boms-color-warning-bg: #fff4d9;
+  --boms-color-warning-border: #ecc670;
+  --boms-color-warning-text: #4a3000;
+  --boms-color-danger: #{$negative};
+  --boms-color-danger-bg: #fdecea;
+  --boms-color-danger-text: #8a1c12;
+  --boms-color-info: #{$info};
+  --boms-color-info-bg: #e8f0f7;
+  --boms-color-info-text: #1f4766;
+  --boms-color-neutral-bg: #f1e9dc;
+
+  // Spacing and radius (mirrors quasar.variables.scss).
+  --boms-space-1: #{$boms-space-1};
+  --boms-space-2: #{$boms-space-2};
+  --boms-space-3: #{$boms-space-3};
+  --boms-space-4: #{$boms-space-4};
+  --boms-space-6: #{$boms-space-6};
+  --boms-space-8: #{$boms-space-8};
+  --boms-radius-sm: #{$boms-radius-sm};
+  --boms-radius-md: #{$boms-radius-md};
+  --boms-radius-lg: #{$boms-radius-lg};
+  --boms-radius-pill: #{$boms-radius-pill};
+
+  // Elevation is reserved: none for routine surfaces, a small shadow for
+  // sticky chrome, a stronger one for overlays (menus, dialogs).
+  --boms-elevation-none: none;
+  --boms-elevation-sticky: 0 -2px 8px rgba(71, 43, 12, 0.08);
+  --boms-elevation-overlay: 0 12px 32px rgba(71, 43, 12, 0.18);
+  // Legacy alias still referenced by older surfaces; routine surfaces are flat.
+  --boms-shadow: var(--boms-elevation-none);
+
+  // Type scale (design-system.md "Typography").
+  --boms-font-size-page-title: clamp(1.625rem, 1.25rem + 1.6vw, 2.25rem);
+  --boms-font-size-section-title: 1.125rem;
+  --boms-font-size-body: 1rem;
+  --boms-font-size-label: 0.875rem;
+  --boms-font-size-caption: 0.8125rem;
+
+  // Safe areas (require viewport-fit=cover, set in index.html).
+  --boms-safe-top: env(safe-area-inset-top, 0px);
+  --boms-safe-right: env(safe-area-inset-right, 0px);
+  --boms-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --boms-safe-left: env(safe-area-inset-left, 0px);
 }
 
 body {
-  background:
-    radial-gradient(
-      circle at top left,
-      rgba(244, 195, 109, 0.32),
-      transparent 28%
-    ),
-    radial-gradient(
-      circle at bottom right,
-      rgba(35, 66, 50, 0.16),
-      transparent 24%
-    ),
-    linear-gradient(180deg, #fffaf1 0%, #f8f1e4 52%, #f4ede0 100%);
-  color: var(--boms-ink);
+  background: var(--boms-color-canvas);
+  color: var(--boms-color-text);
   font-family: var(--boms-font-sans);
 }
 
@@ -96,12 +145,11 @@ code {
   height: 2.75rem;
   display: grid;
   place-items: center;
-  border-radius: 16px;
+  border-radius: var(--boms-radius-md);
   // background: linear-gradient(135deg, #f6d487 0%, #d18d28 100%);
   color: #4a2f13;
   font-size: 1.15rem;
   font-weight: 800;
-  box-shadow: 0 10px 18px rgba(183, 126, 38, 0.28);
 }
 
 .brand-kicker,
@@ -190,7 +238,7 @@ code {
 }
 
 .drawer-link {
-  border-radius: 16px;
+  border-radius: var(--boms-radius-sm);
   margin: 0 0.75rem 0.45rem;
   color: rgba(32, 22, 13, 0.8);
 }
@@ -221,20 +269,9 @@ code {
   gap: 1.25rem;
   align-items: flex-start;
   padding: 1.5rem;
-  border-radius: 28px;
-  background:
-    radial-gradient(
-      circle at top right,
-      rgba(217, 169, 82, 0.18),
-      transparent 24%
-    ),
-    radial-gradient(circle at 18% 82%, rgba(35, 66, 50, 0.1), transparent 18%),
-    linear-gradient(
-      135deg,
-      rgba(255, 246, 223, 0.96),
-      rgba(255, 255, 255, 0.92)
-    );
-  box-shadow: var(--boms-shadow);
+  border-radius: var(--boms-radius-lg);
+  border: 1px solid var(--boms-color-border);
+  background: var(--boms-color-surface);
 }
 
 .page-hero__title,
@@ -243,6 +280,15 @@ code {
 .section-title {
   margin: 0.35rem 0 0;
   color: var(--boms-cocoa);
+}
+
+// Explicit metrics so `.section-title` looks the same on a div, h2 or h3
+// (Quasar/UA heading sizes, weights and letter-spacing are overridden).
+.section-title {
+  font-size: var(--boms-font-size-section-title);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: normal;
 }
 
 .page-hero__title,
@@ -284,9 +330,10 @@ code {
 }
 
 .surface-card {
-  border-radius: 24px;
-  background: rgba(255, 252, 246, 0.95);
-  box-shadow: var(--boms-shadow);
+  border-radius: var(--boms-radius-lg);
+  border: 1px solid var(--boms-color-border);
+  background: var(--boms-color-surface);
+  box-shadow: none;
 }
 
 .metric-card {
@@ -385,11 +432,9 @@ code {
 .operations-tab-block {
   min-height: 100%;
   padding: 1.25rem;
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 248, 238, 0.9)),
-    rgba(255, 248, 238, 0.85);
-  border: 1px solid rgba(122, 86, 37, 0.1);
+  border-radius: var(--boms-radius-md);
+  background: var(--boms-color-surface-subtle);
+  border: 1px solid var(--boms-color-border);
 }
 
 .operations-subheading {
@@ -419,8 +464,8 @@ code {
 .line-item-card,
 .list-card,
 .empty-state {
-  border-radius: 20px;
-  background: rgba(255, 248, 238, 0.9);
+  border-radius: var(--boms-radius-md);
+  background: var(--boms-color-surface-subtle);
 }
 
 .line-item-card,
@@ -466,7 +511,7 @@ code {
 .dashboard-view-toggle {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(122, 86, 37, 0.14);
-  border-radius: 18px;
+  border-radius: var(--boms-radius-md);
   padding: 0.3rem;
 }
 
@@ -505,15 +550,9 @@ code {
 .dashboard-trend-focus {
   min-height: 100%;
   padding: 1.15rem;
-  border-radius: 24px;
-  background:
-    radial-gradient(
-      circle at top right,
-      rgba(244, 195, 109, 0.24),
-      transparent 36%
-    ),
-    linear-gradient(160deg, rgba(255, 249, 234, 0.96), rgba(255, 255, 255, 0.9));
-  border: 1px solid rgba(204, 139, 44, 0.14);
+  border-radius: var(--boms-radius-md);
+  background: var(--boms-color-surface-subtle);
+  border: 1px solid var(--boms-color-border);
 }
 
 .dashboard-trend-focus__eyebrow {
@@ -594,7 +633,7 @@ code {
   appearance: none;
   width: 100%;
   border: 1px solid rgba(122, 86, 37, 0.1);
-  border-radius: 22px;
+  border-radius: var(--boms-radius-md);
   background: rgba(255, 249, 240, 0.72);
   padding: 0.95rem 1rem;
   display: grid;
@@ -613,15 +652,12 @@ code {
 }
 
 .dashboard-trend-row:hover {
-  transform: translateY(-1px);
-  border-color: rgba(204, 139, 44, 0.26);
-  box-shadow: 0 12px 24px rgba(109, 72, 31, 0.07);
+  border-color: rgba(204, 139, 44, 0.32);
 }
 
 .dashboard-trend-row--active {
-  border-color: rgba(204, 139, 44, 0.38);
+  border-color: rgba(204, 139, 44, 0.48);
   background: rgba(255, 248, 231, 0.94);
-  box-shadow: 0 14px 26px rgba(109, 72, 31, 0.1);
 }
 
 .dashboard-trend-row__meta {
@@ -681,7 +717,7 @@ code {
   gap: 1rem;
   align-items: center;
   padding: 0.95rem 1rem;
-  border-radius: 20px;
+  border-radius: var(--boms-radius-md);
   background: rgba(255, 248, 238, 0.86);
 }
 
@@ -733,7 +769,7 @@ code {
 
 .dashboard-review-stat {
   padding: 1rem;
-  border-radius: 20px;
+  border-radius: var(--boms-radius-md);
   background: rgba(255, 248, 238, 0.86);
 }
 
@@ -760,7 +796,7 @@ code {
 
 .dashboard-note {
   padding: 1rem 1.05rem;
-  border-radius: 20px;
+  border-radius: var(--boms-radius-md);
   border: 1px solid rgba(122, 86, 37, 0.08);
   background: rgba(255, 248, 238, 0.86);
 }
@@ -827,8 +863,8 @@ code {
 
 .auth-hero,
 .auth-card {
-  border-radius: 30px;
-  box-shadow: var(--boms-shadow);
+  border-radius: var(--boms-radius-lg);
+  border: 1px solid var(--boms-color-border);
 }
 
 .auth-hero {
@@ -857,7 +893,7 @@ code {
   gap: 0.85rem;
   align-items: start;
   padding: 1rem 1.1rem;
-  border-radius: 20px;
+  border-radius: var(--boms-radius-md);
   background: rgba(255, 255, 255, 0.46);
 }
 
@@ -901,23 +937,27 @@ code {
 }
 
 .error-shell {
-  background:
-    radial-gradient(
-      circle at top center,
-      rgba(244, 195, 109, 0.28),
-      transparent 32%
-    ),
-    linear-gradient(180deg, #fffaf2 0%, #f3ead9 100%);
+  background: var(--boms-color-canvas);
 }
 
 .error-shell__card {
   padding: 2rem;
-  border-radius: 28px;
-  background: rgba(255, 251, 244, 0.94);
-  box-shadow: var(--boms-shadow);
+  border-radius: var(--boms-radius-lg);
+  border: 1px solid var(--boms-color-border);
+  background: var(--boms-color-surface);
+}
+
+.error-shell__title {
+  margin: 0;
+  color: var(--boms-color-heading);
+  font-size: var(--boms-font-size-page-title);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: normal;
 }
 
 .error-shell__code {
+  margin: 0;
   font-size: clamp(8rem, 18vw, 16rem);
   line-height: 1;
   color: rgba(78, 54, 32, 0.18);
@@ -1053,8 +1093,8 @@ code {
   display: grid;
   gap: 8px;
   padding: 16px;
-  border: 1px solid #e8dfd2;
-  border-radius: 14px;
+  border: 1px solid var(--boms-color-border);
+  border-radius: var(--boms-radius-md);
 }
 .report-row__field {
   display: flex;
@@ -1110,7 +1150,7 @@ code {
   .form-footer {
     position: sticky;
     bottom: 0;
-    padding: 12px 0;
+    padding: 12px 0 calc(12px + var(--boms-safe-bottom));
     background: #fffcf6;
     z-index: 2;
   }
@@ -1124,5 +1164,136 @@ code {
   }
   .report-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Shared primitives for the foundation components
+ * (see docs/audits/components.md).
+ * ------------------------------------------------------------------------ */
+
+/* Status chip: one tone per semantic status; always text plus icon. */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--boms-space-1);
+  min-height: 32px;
+  max-width: 100%;
+  padding: var(--boms-space-1) var(--boms-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--boms-radius-pill);
+  font-size: var(--boms-font-size-label);
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.status-chip--neutral {
+  background: var(--boms-color-neutral-bg);
+  color: var(--boms-color-text);
+}
+.status-chip--success {
+  background: var(--boms-color-success-bg);
+  color: var(--boms-color-success-text);
+}
+.status-chip--info {
+  background: var(--boms-color-info-bg);
+  color: var(--boms-color-info-text);
+}
+.status-chip--warning {
+  background: var(--boms-color-warning-bg);
+  border-color: var(--boms-color-warning-border);
+  color: var(--boms-color-warning-text);
+}
+.status-chip--danger {
+  background: var(--boms-color-danger-bg);
+  color: var(--boms-color-danger-text);
+}
+
+/* Visually hidden but announced. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Money and quantities line up in lists and tables. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Overlays keep elevation; routine surfaces stay flat. */
+.q-menu {
+  box-shadow: var(--boms-elevation-overlay);
+}
+
+/* ---------------------------------------------------------------------------
+ * Safe areas (MF-09). Requires viewport-fit=cover in index.html.
+ * ------------------------------------------------------------------------ */
+.shell-header {
+  padding-top: var(--boms-safe-top);
+  padding-left: var(--boms-safe-left);
+  padding-right: var(--boms-safe-right);
+}
+.q-drawer .q-drawer__content {
+  padding-bottom: var(--boms-safe-bottom);
+}
+.q-drawer--left .q-drawer__content {
+  padding-left: var(--boms-safe-left);
+}
+.q-footer {
+  padding-bottom: var(--boms-safe-bottom);
+}
+.page-layout {
+  padding-left: calc(1.5rem + var(--boms-safe-left));
+  padding-right: calc(1.5rem + var(--boms-safe-right));
+  padding-bottom: calc(1.5rem + var(--boms-safe-bottom));
+}
+@media (max-width: 767px) {
+  .page-layout {
+    padding-left: calc(1rem + var(--boms-safe-left));
+    padding-right: calc(1rem + var(--boms-safe-right));
+    padding-bottom: calc(1rem + var(--boms-safe-bottom));
+  }
+}
+
+/* Visible focus for custom interactive elements (Quasar draws its own). */
+:where(a, button, [tabindex]):focus-visible {
+  outline: 3px solid var(--boms-color-focus);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion (MF-09): remove nonessential transitions and animation,
+ * including the QTabPanels `animated` slide transitions.
+ * ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+  .q-panel-parent .q-transition--slide-right-enter-active,
+  .q-panel-parent .q-transition--slide-right-leave-active,
+  .q-panel-parent .q-transition--slide-left-enter-active,
+  .q-panel-parent .q-transition--slide-left-leave-active,
+  .q-panel-parent .q-transition--slide-up-enter-active,
+  .q-panel-parent .q-transition--slide-up-leave-active,
+  .q-panel-parent .q-transition--slide-down-enter-active,
+  .q-panel-parent .q-transition--slide-down-leave-active {
+    transition: none !important;
+    transform: none !important;
   }
 }
