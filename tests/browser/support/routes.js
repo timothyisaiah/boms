@@ -11,7 +11,7 @@ const allowedRolesFor = name =>
  * name:      used for screenshot/test names
  * path:      hash path passed to gotoRoute
  * heading:   accessible name of the destination's single h1 (string = exact)
- * ready:     text that identifies routes that currently have no h1
+ * ready:     optional fallback text for a route without a configured h1
  * workspace: `/api/workspace?name=` the route loads on entry (or null)
  * roles:     roles that can open the route; `null` = signed-out only
  */

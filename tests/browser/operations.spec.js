@@ -345,11 +345,9 @@ test('first load is never shown as live, unavailable or zero', async ({
   await expect(chip).toHaveAttribute('data-workspace-mode', 'live')
 })
 
-test.fixme('overflow menu opens managers whose dialogs outlive the menu', async ({
+test('overflow menu opens managers whose dialogs outlive the menu', async ({
   page
 }) => {
-  // Enabled by the dev integrator after the managers branch supplies the
-  // shared dialog triggers and the Operations header slot is connected.
   await page.setViewportSize({ width: 375, height: 812 })
   await mockOperations(page)
   await gotoRoute(page, '/operations')
@@ -396,6 +394,12 @@ test('production staff see only production write actions', async ({ page }) => {
     ).toBeVisible()
     await expect(
       page.locator('.q-menu .q-item').filter({ hasText: 'Back to dashboard' })
+    ).toBeVisible()
+    await expect(
+      page.locator('.q-menu .q-item').filter({ hasText: 'View variants' })
+    ).toBeVisible()
+    await expect(
+      page.locator('.q-menu .q-item').filter({ hasText: 'View materials' })
     ).toBeVisible()
     await expect(
       page

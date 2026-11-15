@@ -96,6 +96,12 @@
       />
     </main>
 
+    <OperationsManagers
+      ref="managersRef"
+      @saved="refreshAll"
+      @supplier-added="supplierAdded"
+    />
+
     <DirtyGuardDialog :when="batchDraft.isDirty.value" />
   </q-page>
 </template>
@@ -104,7 +110,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { authState } from '@/services/auth'
-import { canWrite } from '@/constants/capabilities'
+import { can, canWrite } from '@/constants/capabilities'
 import PageHeader from '@/components/PageHeader.vue'
 import TaskSelector from '@/components/TaskSelector.vue'
 import WorkspaceState from '@/components/WorkspaceState.vue'
@@ -112,6 +118,7 @@ import DirtyGuardDialog from '@/components/DirtyGuardDialog.vue'
 import ReceiptForm from '@/components/operations/ReceiptForm.vue'
 import BatchForm from '@/components/operations/BatchForm.vue'
 import HistoryRecords from '@/components/operations/HistoryRecords.vue'
+import OperationsManagers from '@/components/operations/OperationsManagers.vue'
 import OperationsSnapshot from '@/components/operations/OperationsSnapshot.vue'
 import {
   batchColumns,
@@ -139,6 +146,7 @@ const $q = useQuasar()
 const task = ref('')
 const receiptFormView = ref(null)
 const batchFormView = ref(null)
+const managersRef = ref(null)
 const isSubmittingPurchase = ref(false)
 const isSubmittingBatch = ref(false)
 
@@ -272,14 +280,40 @@ const subtitle = computed(() => {
   return 'Review material receipts, production batches, and stock on hand.'
 })
 
-// Management dialogs are intentionally not included here. The managers wave
-// will add its PageHeader overflow slot after its shared dialog components land.
 const headerActions = computed(() => [
   {
     label: 'Refresh data',
     icon: 'refresh',
     disable: workspaceState.isLoading.value,
     handler: refreshAll
+  },
+  {
+    label: canWrite(authState.role, 'variants')
+      ? 'Manage variants'
+      : 'View variants',
+    icon: 'category',
+    visible: can(authState.role, 'read:variants'),
+    handler: () => managersRef.value?.openVariants()
+  },
+  {
+    label: canWrite(authState.role, 'materials')
+      ? 'Manage materials'
+      : 'View materials',
+    icon: 'inventory_2',
+    visible: can(authState.role, 'read:materials'),
+    handler: () => managersRef.value?.openMaterials()
+  },
+  {
+    label: 'Add supplier',
+    icon: 'add_business',
+    visible: canWrite(authState.role, 'suppliers'),
+    handler: () => managersRef.value?.openAddSupplier()
+  },
+  {
+    label: 'Manage suppliers',
+    icon: 'manage_search',
+    visible: canWrite(authState.role, 'suppliers'),
+    handler: () => managersRef.value?.openSupplierProfiles()
   },
   { label: 'Back to dashboard', icon: 'arrow_back', to: '/' }
 ])
@@ -300,6 +334,11 @@ async function refreshAll() {
   if (purchaseHistory.loaded.value) refreshes.push(purchaseHistory.reload())
   if (batchHistory.loaded.value) refreshes.push(batchHistory.reload())
   await Promise.all(refreshes)
+}
+
+async function supplierAdded(result) {
+  await refreshAll()
+  if (result?.id) receiptForm.state.supplierId = result.id
 }
 
 async function openPrimaryTask() {

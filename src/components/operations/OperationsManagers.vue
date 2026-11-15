@@ -1,21 +1,20 @@
 <template>
-  <section ref="root" class="ops-managers" aria-labelledby="ops-managers-title">
-    <h2 id="ops-managers-title" class="section-title ops-managers__title"
-      >Catalogue and suppliers</h2
-    >
-    <!-- The managers render their own trigger buttons and dialogs. They stay
-         mounted here (not inside the header's overflow QMenu, which unmounts
-         on close) so the page header can open them via `open(label)`. -->
-    <div class="ops-managers__actions">
-      <VariantManager @saved="emit('saved')" />
-      <MaterialManager @saved="emit('saved')" />
-      <AddPartnerButton
-        kind="supplier"
-        @saved="result => emit('supplier-added', result)"
-      />
-      <PartnerProfiles kind="supplier" @saved="emit('saved')" />
-    </div>
-  </section>
+  <!-- Keep dialogs mounted outside PageHeader's QMenu so closing the menu
+       cannot unmount the dialog that its action just opened. -->
+  <VariantManager ref="variantManager" hide-trigger @saved="emit('saved')" />
+  <MaterialManager ref="materialManager" hide-trigger @saved="emit('saved')" />
+  <AddPartnerButton
+    ref="addSupplier"
+    kind="supplier"
+    hide-trigger
+    @saved="result => emit('supplier-added', result)"
+  />
+  <PartnerProfiles
+    ref="supplierProfiles"
+    kind="supplier"
+    hide-trigger
+    @saved="emit('saved')"
+  />
 </template>
 
 <script setup>
@@ -26,37 +25,15 @@ import AddPartnerButton from '@/components/AddPartnerButton.vue'
 import PartnerProfiles from '@/components/PartnerProfiles.vue'
 
 const emit = defineEmits(['saved', 'supplier-added'])
-const root = ref(null)
+const variantManager = ref(null)
+const materialManager = ref(null)
+const addSupplier = ref(null)
+const supplierProfiles = ref(null)
 
-/**
- * Activate a manager's own trigger button by its visible label, e.g.
- * "Manage variants". Returns false when the role does not have it.
- */
-function open(label) {
-  const button = [...(root.value?.querySelectorAll('button') ?? [])].find(
-    // q-btn renders its label in `.block`; icon ligature text sits apart.
-    element => element.querySelector('.block')?.textContent.trim() === label
-  )
-  if (!button) return false
-  button.click()
-  return true
-}
-
-defineExpose({ open })
+defineExpose({
+  openVariants: () => variantManager.value?.show('list'),
+  openMaterials: () => materialManager.value?.show('list'),
+  openAddSupplier: () => addSupplier.value?.show(),
+  openSupplierProfiles: () => supplierProfiles.value?.show()
+})
 </script>
-
-<style scoped>
-.ops-managers {
-  padding-top: var(--boms-space-4);
-  border-top: 1px solid var(--boms-color-border);
-}
-.ops-managers__title {
-  margin: 0;
-}
-.ops-managers__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--boms-space-2);
-  margin-top: var(--boms-space-3);
-}
-</style>

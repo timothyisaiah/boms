@@ -1,6 +1,4 @@
-// Accessibility smoke checks per route. Routes that currently fail are
-// test.fixme with the defect noted; page agents remove the entry when fixed
-// (and give routes without an h1 a `heading` in support/routes.js).
+// Accessibility smoke checks per route.
 import { test, expect } from '@playwright/test'
 import {
   ALL_ROUTES,
@@ -16,17 +14,12 @@ import {
 const PHONE = { width: 375, height: 812 }
 const DESKTOP = { width: 1440, height: 900 }
 
-// `<route>@<phone|desktop>` → why the heading checks currently fail.
-const KNOWN_HEADING_DEFECTS = {}
-
 for (const [size, viewport] of Object.entries({
   phone: PHONE,
   desktop: DESKTOP
 }))
   for (const route of ALL_ROUTES)
     test(`${route.name} heading outline on ${size}`, async ({ page }) => {
-      const defect = KNOWN_HEADING_DEFECTS[`${route.name}@${size}`]
-      test.fixme(Boolean(defect), defect)
       await page.setViewportSize(viewport)
       await mockApi(page, { role: route.roles === null ? null : 'admin_owner' })
       await gotoRoute(page, route.path, routeTarget(route))

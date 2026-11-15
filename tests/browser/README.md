@@ -11,7 +11,6 @@ every `/api` request mocked, so no database or `.env` file is needed (except
 PW_PORT=9202 npx playwright test                 # everything
 PW_PORT=9202 npx playwright test responsive      # one spec file
 PW_PORT=9202 npx playwright test -g "320px"      # by test title
-PW_SHOW_KNOWN=1 PW_PORT=9202 npx playwright test responsive -g "dashboard fits at 320"
 ```
 
 `playwright.config.js` reads `PW_PORT` and starts its own dev server on it
@@ -122,20 +121,6 @@ component, so the contract is tested before any page adopts it.
   `visibleH1Texts(page)`, `workspaceModes(page)`, `waitForLayoutStable(page)`.
 - `expectSingleH1(page)`, `expectNoSkippedHeadingLevels(page)`,
   `headingOutline(page)`, `emulateReducedMotion(page)`.
-
-## Known defects (expected failures)
-
-Known defects stay in the suite so it is green today and flips when fixed:
-
-- `responsive.spec.js` `KNOWN_OVERFLOW` — `test.fail()` cases (e.g. MF-01,
-  dashboard at 320px). When a fix lands the test "unexpectedly passes":
-  delete the entry. `PW_SHOW_KNOWN=1` runs them as normal tests to print the
-  offending elements.
-- `responsive.spec.js` `KNOWN_HEADING_GAPS` — routes with no visible h1 at
-  some widths; overflow is still checked, using fallback ready text.
-- `a11y.spec.js` `KNOWN_HEADING_DEFECTS` — `test.fixme()` routes whose
-  heading outline fails. Remove the entry when the page is fixed; for routes
-  that gain an h1, also set `heading` in `support/routes.js`.
 
 ## Adding a module spec
 

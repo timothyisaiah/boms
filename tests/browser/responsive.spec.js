@@ -16,29 +16,6 @@ import {
   trackPageErrors
 } from './support/index.js'
 
-// Known horizontal-overflow defects, keyed `<route>@<width>`. Each case runs
-// as an expected failure (test.fail) so the suite stays green today and
-// flips to "unexpectedly passed" the moment the defect is fixed — delete the
-// entry then.
-const KNOWN_OVERFLOW = {}
-
-// Routes whose h1 is missing or hidden at some widths. The fits test then
-// waits for `ready` text instead (overflow is still checked) and records an
-// annotation; a11y.spec.js tracks the heading defect itself as test.fixme.
-const KNOWN_HEADING_GAPS = {
-  // The auth h1 sits in .auth-hero, which is display:none below 1024px, so
-  // phones and tablets get no visible h1 at all.
-  auth: {
-    applies: width => width < 1024,
-    ready: 'Access your Beecone workspace',
-    note: 'auth h1 hidden below 1024px (.auth-hero display:none)'
-  }
-}
-
-// PW_SHOW_KNOWN=1 runs known defects as ordinary tests so their failure
-// output (including overflow offenders) is printed.
-const showKnown = process.env.PW_SHOW_KNOWN === '1'
-
 const matrix = [
   ...VIEWPORTS.flatMap(viewport =>
     ALL_ROUTES.map(route => ({ route, viewport }))
@@ -51,26 +28,12 @@ const matrix = [
 
 for (const { route, viewport } of matrix)
   test(`${route.name} fits at ${viewport.width}px`, async ({ page }) => {
-    const known = KNOWN_OVERFLOW[`${route.name}@${viewport.width}`]
-    test.fail(Boolean(known) && !showKnown, known)
-    const gap = KNOWN_HEADING_GAPS[route.name]
-    const headingGap = !showKnown && gap?.applies(viewport.width)
-    if (headingGap)
-      test
-        .info()
-        .annotations.push({ type: 'heading-gap', description: gap.note })
     await page.setViewportSize(viewport)
     await mockApi(page, { role: route.roles === null ? null : 'admin_owner' })
     const errors = trackPageErrors(page)
-    await gotoRoute(
-      page,
-      route.path,
-      headingGap
-        ? { ...routeTarget(route), heading: null, ready: gap.ready }
-        : routeTarget(route)
-    )
+    await gotoRoute(page, route.path, routeTarget(route))
     await screenshotRoute(page, route.name, viewport.width)
-    if (route.heading && !headingGap)
+    if (route.heading)
       await expect(
         page.getByRole('heading', {
           level: 1,
@@ -94,9 +57,7 @@ for (const role of ROLES)
         ...routeTarget(destination),
         expectPath: destination.path
       })
-      const known = !showKnown && KNOWN_OVERFLOW[`${destination.name}@320`]
-      // Overflow on known-defect routes is covered by the matrix above.
-      if (!known) await expectNoHorizontalOverflow(page)
+      await expectNoHorizontalOverflow(page)
     }
     expect(errors).toEqual([])
   })
