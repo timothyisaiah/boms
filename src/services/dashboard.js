@@ -1,6 +1,7 @@
 import { can } from '@/constants/capabilities'
 import { apiRequest } from '@/lib/api'
 import { asNumber, formatMoney, formatQuantity } from '@/lib/format'
+import { netResultStatus, retailerBalanceStatus } from '@/lib/status'
 
 // Which dashboard projections a role may see. Each flag mirrors the server
 // role set that gates the matching projection in server/projections.ts, read
@@ -106,29 +107,8 @@ function createMonthSummary(month) {
   }
 }
 
-function createRetailerState(balance) {
-  if (asNumber(balance.outstanding_amount) > 0) {
-    return {
-      label: 'Payment due',
-      tone: 'warning'
-    }
-  }
-
-  if (asNumber(balance.remaining_quantity) > 0) {
-    return {
-      label: 'In store',
-      tone: 'success'
-    }
-  }
-
-  return {
-    label: 'Settled',
-    tone: 'neutral'
-  }
-}
-
 function mapRetailerWatchlist(balance) {
-  const state = createRetailerState(balance)
+  const state = retailerBalanceStatus(balance)
 
   return {
     id: balance.retailer_id,
@@ -580,9 +560,15 @@ export function getMonthContext(workspace, monthKey) {
   }
 }
 
+/** Open collections are an exception the strip shows first. */
+function openCollectionsTone(snapshot) {
+  return asNumber(snapshot.outstandingAmount) > 0 ? 'warning' : null
+}
+
 /**
  * The four decision figures for the role, shown as the compact metric strip.
- * Each item is `{ label, value, hint }`.
+ * Each item is `{ label, value, hint, tone? }`; a warning/danger tone marks
+ * an exception figure.
  */
 export function buildMetricStrip(workspace, month, previousMonth) {
   if (!month) {
@@ -614,12 +600,14 @@ export function buildMetricStrip(workspace, month, previousMonth) {
       {
         label: 'Net result',
         value: formatMoney(month.netProfit),
-        hint: `${formatMoney(month.expenseAmount)} in operating expenses`
+        hint: `${formatMoney(month.expenseAmount)} in operating expenses`,
+        tone: month.netProfit < 0 ? 'danger' : null
       },
       {
         label: 'Collections open now',
         value: formatMoney(snapshot.outstandingAmount),
-        hint: `${snapshot.retailersWithOutstanding} retailers need follow-up`
+        hint: `${snapshot.retailersWithOutstanding} retailers with payment due`,
+        tone: openCollectionsTone(snapshot)
       }
     ]
   }
@@ -648,7 +636,8 @@ export function buildMetricStrip(workspace, month, previousMonth) {
       {
         label: 'Collections open now',
         value: formatMoney(snapshot.outstandingAmount),
-        hint: `${snapshot.retailersWithOutstanding} retailers still open`
+        hint: `${snapshot.retailersWithOutstanding} retailers with payment due`,
+        tone: openCollectionsTone(snapshot)
       }
     ]
   }
@@ -896,7 +885,7 @@ export function buildMonthlyReviewStats(access, month) {
   return stats.slice(0, 6)
 }
 
-/** "What stands out" notes; `tone` is a status-chip tone. */
+/** "What stands out" notes; `tone` is a status-chip tone (src/lib/status.js). */
 export function buildMonthlyNotes(access, month) {
   if (!month) {
     return []
@@ -956,7 +945,7 @@ export function buildMonthlyNotes(access, month) {
 
   if (access.expenses) {
     notes.push({
-      tone: month.netProfit < 0 ? 'danger' : 'success',
+      tone: netResultStatus(month.netProfit).tone,
       title: 'Bottom line',
       text:
         month.netProfit < 0

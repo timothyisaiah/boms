@@ -21,10 +21,10 @@
 
     <TaskSelector v-model="task" :items="taskItems" label="Finance tasks" />
 
-    <FinanceMetricStrip
-      :metrics="metrics"
+    <MetricStrip
+      title="Finance figures"
+      :items="metrics"
       :loading="!ws.hasData.value"
-      label="Finance figures"
     />
 
     <q-tab-panels
@@ -98,11 +98,11 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import DirtyGuardDialog from '@/components/DirtyGuardDialog.vue'
+import MetricStrip from '@/components/MetricStrip.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TaskSelector from '@/components/TaskSelector.vue'
 import WorkspaceState from '@/components/WorkspaceState.vue'
 import ExpenseForm from '@/components/finance/ExpenseForm.vue'
-import FinanceMetricStrip from '@/components/finance/FinanceMetricStrip.vue'
 import FinanceRecords from '@/components/finance/FinanceRecords.vue'
 import FinanceSnapshot from '@/components/finance/FinanceSnapshot.vue'
 import ReconciliationForm from '@/components/finance/ReconciliationForm.vue'
@@ -227,26 +227,29 @@ const retailersWithOutstanding = computed(
     ).length
 )
 
+// Outstanding cash is the exception figure: MetricStrip puts it first.
 const metrics = computed(() => [
   {
     label: 'Recognized sales',
     value: formatMoney(profitSummary.value.recognized_sales_value),
-    text: `${formatQuantity(profitSummary.value.sold_quantity)} jars settled.`
+    hint: `${formatQuantity(profitSummary.value.sold_quantity)} jars settled`
   },
   {
     label: 'Remitted',
     value: formatMoney(profitSummary.value.remitted_amount),
-    text: `${formatQuantity(historyCounts.value.remittances)} receipts posted.`
+    hint: `${formatQuantity(historyCounts.value.remittances)} receipts posted`
   },
   {
     label: 'Gross profit',
     value: formatMoney(profitSummary.value.gross_profit),
-    text: 'Before operating expenses.'
+    hint: 'Before operating expenses'
   },
   {
     label: 'Outstanding',
     value: formatMoney(profitSummary.value.outstanding_amount),
-    text: `${retailersWithOutstanding.value} retailers need follow-up.`
+    hint: `${retailersWithOutstanding.value} retailers with payment due`,
+    tone:
+      asNumber(profitSummary.value.outstanding_amount) > 0 ? 'warning' : null
   }
 ])
 

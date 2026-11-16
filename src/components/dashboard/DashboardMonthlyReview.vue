@@ -24,7 +24,7 @@
     </div>
 
     <template v-if="hasData">
-      <DashboardMetricStrip
+      <MetricStrip
         title="Review summary"
         title-visible
         :heading-level="3"
@@ -42,9 +42,7 @@
               :key="note.title"
               class="dash-row review__note"
             >
-              <span class="status-chip" :class="`status-chip--${note.tone}`">
-                {{ note.title }}
-              </span>
+              <StatusBadge :tone="note.tone" :label="note.title" />
               <span class="review__note-text">{{ note.text }}</span>
             </li>
           </ul>
@@ -63,7 +61,7 @@
         </section>
       </div>
     </template>
-    <DashboardMetricStrip
+    <MetricStrip
       v-else-if="loading"
       title="Review summary"
       :heading-level="3"
@@ -74,7 +72,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import DashboardMetricStrip from './DashboardMetricStrip.vue'
+import MetricStrip from '@/components/MetricStrip.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
 import {
   buildMonthlyBreakdown,
   buildMonthlyNotes,

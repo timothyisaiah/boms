@@ -30,7 +30,11 @@
 
     <TaskSelector v-model="task" label="Distribution tasks" :items="tasks" />
 
-    <RetailMetricStrip :metrics="metrics" :loading="!ws.hasData.value" />
+    <MetricStrip
+      title="Distribution summary"
+      :items="metrics"
+      :loading="!ws.hasData.value"
+    />
 
     <div class="retail-page__content">
       <StockIssueForm
@@ -69,12 +73,12 @@
 import { computed, nextTick, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute } from 'vue-router'
+import MetricStrip from '@/components/MetricStrip.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TaskSelector from '@/components/TaskSelector.vue'
 import WorkspaceState from '@/components/WorkspaceState.vue'
 import DispatchRecords from '@/components/retail/DispatchRecords.vue'
 import MovementRecords from '@/components/retail/MovementRecords.vue'
-import RetailMetricStrip from '@/components/retail/RetailMetricStrip.vue'
 import RetailPartnerActions from '@/components/retail/RetailPartnerActions.vue'
 import RetailSnapshot from '@/components/retail/RetailSnapshot.vue'
 import StockIssueForm from '@/components/retail/StockIssueForm.vue'
@@ -177,7 +181,7 @@ const metrics = computed(() => [
   {
     label: 'Open jars',
     value: `${formatQuantity(totalOpenUnits.value)} jars`,
-    caption: `${openFinishedStock.value.length} batch lines`
+    hint: `${openFinishedStock.value.length} batch lines`
   },
   {
     label: 'With stock',

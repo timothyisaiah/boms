@@ -16,11 +16,7 @@
             <h3 class="finance-snapshot__balance-title">
               {{ balance.retailer_name }}
             </h3>
-            <span
-              class="status-chip"
-              :class="`status-chip--${getRetailerBalanceState(balance).tone}`"
-              >{{ getRetailerBalanceState(balance).label }}</span
-            >
+            <StatusBadge v-bind="retailerBalanceStatus(balance)" />
           </div>
           <p class="finance-snapshot__muted">
             {{ balance.delivery_location || 'Delivery location pending' }}
@@ -77,12 +73,7 @@
         <div v-for="row in profitRows" :key="row.label">
           <dt>{{ row.label }}</dt>
           <dd>
-            <span
-              v-if="row.tone"
-              class="status-chip"
-              :class="`status-chip--${row.tone}`"
-              >{{ row.value }}</span
-            >
+            <StatusBadge v-if="row.tone" :tone="row.tone" :label="row.value" />
             <template v-else>{{ row.value }}</template>
           </dd>
         </div>
@@ -95,7 +86,8 @@
 import { computed, useId } from 'vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format'
-import { getRetailerBalanceState } from '@/components/finance/financeDomain'
+import StatusBadge from '@/components/StatusBadge.vue'
+import { netResultStatus, retailerBalanceStatus } from '@/lib/status'
 
 const props = defineProps({
   balances: { type: Array, default: () => [] },
@@ -108,6 +100,7 @@ const profitId = useId()
 const jars = value => `${formatQuantity(value)} jars`
 const profitRows = computed(() => {
   const profit = props.profit
+  const net = netResultStatus(profit.net_profit)
   return [
     { label: 'Issued to retailers', value: jars(profit.issued_quantity) },
     { label: 'Sold through reconciliation', value: jars(profit.sold_quantity) },
@@ -129,8 +122,8 @@ const profitRows = computed(() => {
     },
     {
       label: 'Net result',
-      value: `${profit.net_profit >= 0 ? 'Profit' : 'Loss'} ${formatMoney(profit.net_profit)}`,
-      tone: profit.net_profit >= 0 ? 'success' : 'danger'
+      value: `${net.label} ${formatMoney(profit.net_profit)}`,
+      tone: net.tone
     },
     { label: 'Remitted so far', value: formatMoney(profit.remitted_amount) },
     {

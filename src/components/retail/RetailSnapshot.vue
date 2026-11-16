@@ -14,10 +14,10 @@
             <strong>{{
               stock.batch?.batch_code ?? `Batch ${stock.id}`
             }}</strong>
-            <span class="status-chip status-chip--success tabular-nums">
+            <StatusBadge tone="success" class="tabular-nums">
               {{ formatQuantity(stock.quantity_remaining) }} /
               {{ formatQuantity(stock.quantity_produced) }} jars left
-            </span>
+            </StatusBadge>
           </div>
           <p class="retail-snapshot__meta">
             {{ stock.variant?.variant_name ?? 'Unknown variant' }} /
@@ -57,16 +57,12 @@
         >
           <div class="retail-snapshot__row-head">
             <strong>{{ balance.retailerName }}</strong>
-            <span
-              class="status-chip tabular-nums"
-              :class="
-                balance.totalUnits > 0
-                  ? 'status-chip--success'
-                  : 'status-chip--neutral'
-              "
+            <StatusBadge
+              :tone="balance.totalUnits > 0 ? 'success' : 'neutral'"
+              class="tabular-nums"
             >
               {{ formatQuantity(balance.totalUnits) }} jars on hand
-            </span>
+            </StatusBadge>
           </div>
           <p class="retail-snapshot__meta">
             {{ balance.deliveryLocation || 'Delivery location pending' }}
@@ -132,9 +128,7 @@
             <strong>{{
               movement.retailer?.retailer_name ?? 'Retailer'
             }}</strong>
-            <span class="status-chip status-chip--neutral">
-              {{ formatMovementType(movement.movement_type) }}
-            </span>
+            <StatusBadge :label="formatMovementType(movement.movement_type)" />
           </div>
           <p class="retail-snapshot__meta">
             {{ movement.variant?.sku ?? 'Variant' }} /
@@ -161,6 +155,7 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import EmptyState from '@/components/EmptyState.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
 import {
   formatDate,
   formatMoney,

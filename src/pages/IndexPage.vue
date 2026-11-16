@@ -36,7 +36,7 @@
     />
 
     <template v-if="activeView === 'dashboard'">
-      <DashboardMetricStrip
+      <MetricStrip
         v-if="ws.hasData.value || isFirstLoad"
         :title="`Key figures for ${selectedMonth?.label ?? 'this month'}`"
         :items="metricItems"
@@ -108,12 +108,12 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import BusinessReport from '@/components/BusinessReport.vue'
+import MetricStrip from '@/components/MetricStrip.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TaskSelector from '@/components/TaskSelector.vue'
 import WorkspaceState from '@/components/WorkspaceState.vue'
 import DashboardActivity from '@/components/dashboard/DashboardActivity.vue'
 import DashboardAttention from '@/components/dashboard/DashboardAttention.vue'
-import DashboardMetricStrip from '@/components/dashboard/DashboardMetricStrip.vue'
 import DashboardMonthlyReview from '@/components/dashboard/DashboardMonthlyReview.vue'
 import DashboardTrend from '@/components/dashboard/DashboardTrend.vue'
 import { useWorkspace, WORKSPACE_MODE } from '@/composables/useWorkspace'
