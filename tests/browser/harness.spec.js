@@ -35,7 +35,7 @@ test('delayed workspace API cannot make gotoRoute resolve early', async ({
   // Checked instantly (no auto-wait): the destination and its live data are
   // already on screen, and the previous route's heading is gone.
   expect(await visibleH1Texts(page)).toEqual(['Reconciliation and cash'])
-  expect(await page.getByText('Live mode').isVisible()).toBe(true)
+  expect(await page.getByText('Live data').first().isVisible()).toBe(true)
   expect(
     await page.getByText('UGX 72,500', { exact: true }).first().isVisible()
   ).toBe(true)
@@ -53,43 +53,27 @@ test('control: a bare .q-page wait resolves while the workspace is still pending
   await page.locator('.q-page').first().waitFor()
   // The naive wait returned long before the delayed data could arrive.
   expect(Date.now() - started).toBeLessThan(DELAY)
-  expect(await page.getByText('Live mode').isVisible()).toBe(false)
+  // Finance figures (unique to the delayed response) are not on screen yet.
+  expect(
+    await page.getByText('UGX 72,500', { exact: true }).first().isVisible()
+  ).toBe(false)
 })
 
 test('gotoRoute waits for data-workspace-mode to leave loading/refreshing', async ({
   page
 }) => {
-  // Simulates the forthcoming WorkspaceState component: once the finance h1
-  // renders, a status element cycles loading → refreshing → live.
-  await page.addInitScript(() => {
-    const observer = new MutationObserver(() => {
-      const h1 = [...document.querySelectorAll('h1')].find(
-        el => el.textContent.trim() === 'Reconciliation and cash'
-      )
-      if (!h1 || document.querySelector('[data-workspace-mode]')) return
-      const status = document.createElement('div')
-      status.dataset.workspaceMode = 'loading'
-      h1.after(status)
-      setTimeout(() => (status.dataset.workspaceMode = 'refreshing'), 600)
-      setTimeout(() => {
-        status.dataset.workspaceMode = 'live'
-        window.__workspaceLiveAt = Date.now()
-      }, 1200)
-    })
-    document.addEventListener('DOMContentLoaded', () =>
-      observer.observe(document.body, { childList: true, subtree: true })
-    )
-  })
+  // The real WorkspaceState chip and banner stay in `loading` until the
+  // delayed workspace answers; gotoRoute must not resolve before then.
   await page.setViewportSize({ width: 375, height: 812 })
-  await mockApi(page)
+  await mockApi(page, { delays: { 'workspace:finance': DELAY } })
+  await gotoRoute(page, '/operations')
   await gotoRoute(page, '/finance')
-  const resolvedAt = Date.now()
-  await expect(page.locator('[data-workspace-mode]')).toHaveAttribute(
-    'data-workspace-mode',
-    'live'
-  )
-  const liveAt = await page.evaluate(() => window.__workspaceLiveAt)
-  expect(liveAt).toBeLessThanOrEqual(resolvedAt)
+  // Checked instantly (no auto-wait): every status element is already live.
+  const modes = await page
+    .locator('[data-workspace-mode]')
+    .evaluateAll(nodes => nodes.map(node => node.dataset.workspaceMode))
+  expect(modes.length).toBeGreaterThan(0)
+  expect(modes.every(mode => mode === 'live')).toBe(true)
 })
 
 test('gotoRoute resolves on a failed workspace and reports the failure', async ({
