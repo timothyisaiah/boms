@@ -1,92 +1,123 @@
 <template>
   <q-page class="page-layout">
-    <section class="page-hero">
-      <div>
-        <p class="page-hero__eyebrow">Admin</p>
-        <h1 class="page-hero__title">Access and settings</h1>
-        <p class="page-hero__body">
-          Add staff accounts, manage access, and configure your catalogue.
-        </p>
+    <PageHeader
+      title="Users & access"
+      subtitle="Add staff accounts, assign roles and remove access."
+      :actions="[
+        {
+          label: 'Catalogue settings',
+          icon: 'tune',
+          to: '/settings'
+        }
+      ]"
+    >
+      <template #primary>
+        <q-btn
+          color="primary"
+          icon="person_add"
+          label="Add user"
+          no-caps
+          unelevated
+          @click="userManagement?.openCreate()"
+        />
+      </template>
+    </PageHeader>
+
+    <UserManagement ref="userManagement" hide-trigger />
+
+    <!--
+      MF-13 / roadmap iteration 6: technical session and role diagnostics are
+      kept for support but collapsed out of the primary task.
+    -->
+    <q-expansion-item
+      class="session-details"
+      icon="info"
+      label="Session details"
+      caption="Sign-in status and role reference for troubleshooting"
+      header-class="session-details__header"
+    >
+      <div class="session-details__body">
+        <dl class="session-details__list">
+          <div>
+            <dt>Session</dt>
+            <dd>{{ authState.session ? 'Active' : 'Missing' }}</dd>
+          </div>
+          <div>
+            <dt>Signed in as</dt>
+            <dd>{{ authState.user?.email ?? 'No active session' }}</dd>
+          </div>
+          <div>
+            <dt>Account loaded</dt>
+            <dd>{{ authState.profile ? 'Yes' : 'Not yet' }}</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>{{ roleLabel }}</dd>
+          </div>
+          <div>
+            <dt>Account active</dt>
+            <dd>{{ authState.profile?.is_active === false ? 'No' : 'Yes' }}</dd>
+          </div>
+        </dl>
+        <p class="session-details__caption">BOMS roles</p>
+        <ul class="session-details__roles">
+          <li v-for="role in roles" :key="role.value">
+            {{ role.label }} <code>{{ role.value }}</code>
+          </li>
+        </ul>
       </div>
-    </section>
-
-    <UserManagement />
-    <section class="card-grid card-grid--two">
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Environment</div>
-          <div class="section-title">Session status</div>
-        </q-card-section>
-
-        <q-card-section class="detail-list">
-          <div class="detail-row">
-            <span>Authenticated session</span>
-            <q-chip
-              square
-              :color="authState.session ? 'positive' : 'negative'"
-              text-color="white"
-            >
-              {{ authState.session ? 'Active' : 'Missing' }}
-            </q-chip>
-          </div>
-
-          <div class="detail-row">
-            <span>Authenticated email</span>
-            <span>{{ authState.user?.email ?? 'No active session' }}</span>
-          </div>
-
-          <div class="detail-row">
-            <span>User account loaded</span>
-            <q-chip
-              square
-              :color="authState.profile ? 'positive' : 'warning'"
-              text-color="white"
-            >
-              {{ authState.profile ? 'Yes' : 'Not yet' }}
-            </q-chip>
-          </div>
-
-          <div class="detail-row">
-            <span>Resolved role</span>
-            <span>{{ roleLabel }}</span>
-          </div>
-
-          <div class="detail-row">
-            <span>Profile active</span>
-            <span>{{
-              authState.profile?.is_active === false ? 'No' : 'Yes'
-            }}</span>
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat class="surface-card">
-        <q-card-section>
-          <div class="section-label">Role matrix</div>
-          <div class="section-title">Current BOMS roles</div>
-        </q-card-section>
-
-        <q-list separator class="surface-list">
-          <q-item v-for="role in roles" :key="role.value">
-            <q-item-section>
-              <q-item-label>{{ role.label }}</q-item-label>
-              <q-item-label caption>{{ role.value }}</q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-card>
-    </section>
-    <CatalogueSettings />
+    </q-expansion-item>
   </q-page>
 </template>
 
 <script setup>
-import CatalogueSettings from '@/components/CatalogueSettings.vue'
+import { computed, ref } from 'vue'
+import PageHeader from '@/components/PageHeader.vue'
 import UserManagement from '@/components/UserManagement.vue'
-import { computed } from 'vue'
 import { ROLE_OPTIONS, getRoleLabel } from '@/constants/roles'
 import { authState } from '@/services/auth'
 
+const userManagement = ref(null)
 const roles = ROLE_OPTIONS
 const roleLabel = computed(() => getRoleLabel(authState.role))
 </script>
+
+<style scoped>
+.session-details {
+  border: 1px solid var(--boms-color-border);
+  border-radius: var(--boms-radius-md);
+  overflow: hidden;
+}
+.session-details__body {
+  padding: var(--boms-space-2) var(--boms-space-4) var(--boms-space-4);
+}
+.session-details__list {
+  display: grid;
+  gap: var(--boms-space-2);
+  margin: 0;
+}
+.session-details__list > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--boms-space-1) var(--boms-space-4);
+}
+.session-details__list dt {
+  color: var(--boms-color-text-muted);
+}
+.session-details__list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.session-details__caption {
+  margin: var(--boms-space-4) 0 var(--boms-space-1);
+  font-weight: 700;
+}
+.session-details__roles {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.session-details__roles code {
+  color: var(--boms-color-text-muted);
+}
+</style>

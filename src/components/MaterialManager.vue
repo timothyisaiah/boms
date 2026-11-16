@@ -1,42 +1,46 @@
 <template>
-  <q-btn
-    v-if="canManage"
-    outline
-    color="primary"
-    no-caps
-    icon="add"
-    label="Add material"
-    @click="openCreate"
-  />
-  <q-btn
-    flat
-    color="secondary"
-    no-caps
-    icon="inventory_2"
-    label="Manage materials"
-    @click="openManager"
-  />
+  <template v-if="!hideTrigger">
+    <q-btn
+      v-if="canManage"
+      outline
+      color="primary"
+      no-caps
+      icon="add"
+      label="Add material"
+      @click="openCreate"
+    />
+    <q-btn
+      flat
+      color="secondary"
+      no-caps
+      icon="inventory_2"
+      label="Manage materials"
+      @click="openManager"
+    />
+  </template>
 
-  <q-dialog v-model="open" persistent :maximized="$q.screen.lt.sm">
+  <q-dialog
+    v-model="dialogOpen"
+    persistent
+    :maximized="$q.screen.lt.sm"
+    aria-labelledby="material-manager-title"
+  >
     <q-card class="material-manager">
-      <q-card-section class="row items-center justify-between q-gutter-sm">
-        <div>
-          <div class="section-label">Supply catalogue</div>
-          <h2 class="text-h6 q-my-none">{{
-            editing
-              ? form.id
-                ? 'Edit material'
-                : 'Add material'
-              : 'Manage materials'
-          }}</h2>
-        </div>
+      <q-card-section class="manager-header">
+        <h2 id="material-manager-title" class="manager-title">{{
+          editing
+            ? form.id
+              ? 'Edit material'
+              : 'Add material'
+            : 'Manage materials'
+        }}</h2>
         <q-btn
           flat
           round
           icon="close"
           aria-label="Close material manager"
           :disable="pending"
-          @click="open = false"
+          @click="hide"
         />
       </q-card-section>
 
@@ -50,14 +54,14 @@
         <q-banner
           v-if="notice"
           rounded
-          class="bg-green-1 q-mb-md"
+          class="manager-banner manager-banner--success q-mb-md"
           role="status"
           >{{ notice }}</q-banner
         >
         <q-banner
           v-if="loadError"
           rounded
-          class="bg-red-1 q-mb-md"
+          class="manager-banner manager-banner--danger q-mb-md"
           role="alert"
         >
           {{ loadError }}
@@ -101,7 +105,7 @@
               :options="statusOptions"
               emit-value
               map-options
-              behavior="dialog"
+              :behavior="selectBehavior"
             />
             <q-select
               v-model="kindFilter"
@@ -110,7 +114,7 @@
               :options="[{ label: 'All types', value: 'all' }, ...kindOptions]"
               emit-value
               map-options
-              behavior="dialog"
+              :behavior="selectBehavior"
             />
           </div>
           <q-linear-progress
@@ -126,15 +130,21 @@
             >
               <div class="row items-start justify-between q-gutter-sm">
                 <div class="material-copy">
-                  <div class="text-weight-bold">{{ material.name }}</div>
+                  <h3 class="material-name">{{ material.name }}</h3>
                   <div class="text-caption"
                     >{{ material.code }} · {{ kindLabel(material.kind) }} ·
                     {{ material.unit_of_measure }}</div
                   >
                 </div>
-                <q-chip :color="material.is_active ? 'green-1' : 'grey-3'">{{
-                  material.is_active ? 'Active' : 'Inactive'
-                }}</q-chip>
+                <span
+                  class="status-chip"
+                  :class="
+                    material.is_active
+                      ? 'status-chip--success'
+                      : 'status-chip--neutral'
+                  "
+                  >{{ material.is_active ? 'Active' : 'Inactive' }}</span
+                >
               </div>
               <p v-if="material.description" class="q-mt-sm q-mb-none">{{
                 material.description
@@ -148,23 +158,23 @@
                 {{ formatQuantity(material.low_stock_threshold) }}
                 {{ material.unit_of_measure }}</div
               >
-              <q-chip
+              <span
                 v-if="isLowStock(material)"
-                color="amber-2"
-                text-color="brown-10"
-                >Low stock</q-chip
+                class="status-chip status-chip--warning q-mt-sm"
+                >Low stock</span
               >
-              <q-btn
-                v-if="canManage"
-                flat
-                color="primary"
-                no-caps
-                label="Edit material"
-                :aria-label="`Edit ${material.name}`"
-                :disable="locked"
-                class="q-mt-sm"
-                @click="editMaterial(material)"
-              />
+              <div v-if="canManage">
+                <q-btn
+                  flat
+                  color="primary"
+                  no-caps
+                  label="Edit material"
+                  :aria-label="`Edit ${material.name}`"
+                  :disable="locked"
+                  class="q-mt-sm"
+                  @click="editMaterial(material)"
+                />
+              </div>
             </article>
           </div>
           <p
@@ -174,7 +184,15 @@
           >
         </template>
 
-        <q-form v-else class="q-gutter-md" @submit.prevent="saveMaterial">
+        <q-form
+          v-else
+          ref="formRef"
+          class="q-gutter-md"
+          greedy
+          no-error-focus
+          @submit.prevent="saveMaterial"
+          @validation-error="onInvalid"
+        >
           <q-btn
             flat
             no-caps
@@ -183,9 +201,11 @@
             :disable="pending"
             @click="backToList"
           />
+          <FormErrorSummary ref="summaryRef" :errors="formErrors" />
           <q-input
             v-model="form.code"
             outlined
+            for="material-code"
             label="Material code"
             maxlength="80"
             :rules="[required]"
@@ -195,6 +215,7 @@
           <q-input
             v-model="form.name"
             outlined
+            for="material-name"
             label="Material name"
             maxlength="160"
             :rules="[required]"
@@ -203,17 +224,19 @@
           <q-select
             v-model="form.kind"
             outlined
+            for="material-kind"
             label="Material type"
             :options="kindOptions"
             emit-value
             map-options
-            behavior="dialog"
+            :behavior="selectBehavior"
             :rules="[required]"
             :disable="locked || !!form.id"
           />
           <q-input
             v-model="form.unitOfMeasure"
             outlined
+            for="material-unit"
             label="Unit of measure"
             maxlength="40"
             :rules="[required]"
@@ -228,6 +251,7 @@
           <q-input
             v-model="form.lowStockThreshold"
             outlined
+            for="material-threshold"
             type="number"
             inputmode="decimal"
             min="0"
@@ -241,6 +265,7 @@
           <q-input
             v-model="form.description"
             outlined
+            for="material-description"
             label="Description"
             type="textarea"
             autogrow
@@ -253,7 +278,10 @@
             :disable="locked"
             class="material-status-toggle"
           />
-          <q-banner v-if="!form.isActive" rounded class="bg-amber-1"
+          <q-banner
+            v-if="!form.isActive"
+            rounded
+            class="manager-banner manager-banner--warning"
             >Inactive materials cannot be selected for new receipts. Existing
             lots and transaction history remain available.</q-banner
           >
@@ -281,20 +309,45 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
 import { apiRequest } from '@/lib/api'
 import { required } from '@/lib/validation'
+import { canWrite } from '@/constants/capabilities'
 import { authState } from '@/services/auth'
 import { isWriteLocked, writeAction, writeStates } from '@/services/writes'
+import { collectFieldErrors, useFormErrors } from '@/composables/useFormErrors'
+import FormErrorSummary from './FormErrorSummary.vue'
 import WriteStatus from './WriteStatus.vue'
 
-const emit = defineEmits(['saved'])
-const canManage = computed(() =>
-  ['admin_owner', 'operations_manager', 'warehouse_staff'].includes(
-    authState.role
-  )
-)
-const open = ref(false),
+const props = defineProps({
+  /**
+   * v-model:open. Controls the dialog from outside, e.g. from a PageHeader
+   * overflow item. Leave unset to use the built-in buttons only.
+   */
+  open: { type: Boolean, default: undefined },
+  /** View shown when `open` becomes true: 'list' (manage) or 'create'. */
+  view: {
+    type: String,
+    default: 'list',
+    validator: value => ['list', 'create'].includes(value)
+  },
+  /** Hide the built-in "Add material" / "Manage materials" buttons. */
+  hideTrigger: Boolean
+})
+const emit = defineEmits(['saved', 'update:open'])
+const $q = useQuasar()
+const canManage = computed(() => canWrite(authState.role, 'materials'))
+// MF-17: touch-friendly dialog pickers on phones, keyboard menus elsewhere.
+const selectBehavior = computed(() => ($q.screen.lt.sm ? 'dialog' : 'menu'))
+const formRef = ref(null)
+const {
+  errors: formErrors,
+  summaryRef,
+  fail,
+  clear: clearErrors
+} = useFormErrors()
+const dialogOpen = ref(false),
   editing = ref(false),
   loading = ref(false),
   loadError = ref(''),
@@ -356,21 +409,51 @@ function setForm(value) {
 function createMaterial() {
   if (locked.value) return
   setForm(blankForm())
+  clearErrors()
   notice.value = ''
   editing.value = true
 }
 async function openCreate() {
-  open.value = true
+  if (!canManage.value) return openManager()
+  dialogOpen.value = true
+  clearErrors()
   if (isWriteLocked('materials')) {
     setForm(writeStates.materials.body)
     editing.value = true
   } else createMaterial()
 }
 async function openManager() {
-  open.value = true
+  dialogOpen.value = true
   editing.value = false
+  clearErrors()
   notice.value = ''
   await loadMaterials()
+}
+/** Open the dialog on 'list' (manage) or 'create'. */
+function show(view = 'list') {
+  return view === 'create' ? openCreate() : openManager()
+}
+/** Close the dialog. Refused (returns false) while a save is pending. */
+function hide() {
+  if (pending.value) return false
+  dialogOpen.value = false
+  return true
+}
+watch(dialogOpen, value => {
+  if (value !== props.open) emit('update:open', value)
+})
+watch(
+  () => props.open,
+  value => {
+    if (value === true && !dialogOpen.value) show(props.view)
+    else if (value === false && dialogOpen.value && !hide())
+      emit('update:open', true)
+  },
+  { immediate: true }
+)
+async function onInvalid() {
+  await nextTick()
+  await fail(collectFieldErrors(formRef))
 }
 async function loadMaterials() {
   loading.value = true
@@ -394,11 +477,13 @@ function editMaterial(material) {
     lowStockThreshold: String(material.low_stock_threshold),
     isActive: material.is_active
   })
+  clearErrors()
   notice.value = ''
   editing.value = true
 }
 async function backToList() {
   editing.value = false
+  clearErrors()
   await loadMaterials()
 }
 async function saved(result) {
@@ -412,6 +497,7 @@ async function saved(result) {
 }
 async function saveMaterial() {
   if (locked.value) return
+  clearErrors()
   try {
     const result = await writeAction(
       'materials',
@@ -422,6 +508,8 @@ async function saveMaterial() {
     /* WriteStatus preserves the submission and offers a safe retry. */
   }
 }
+
+defineExpose({ show, hide, openManager, openCreate })
 </script>
 
 <style scoped>
@@ -430,22 +518,61 @@ async function saveMaterial() {
   max-width: 100%;
 }
 
+.manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--boms-space-2);
+}
+
+.manager-title {
+  margin: 0;
+  color: var(--boms-color-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: normal;
+}
+
+.manager-banner--success {
+  background: var(--boms-color-success-bg);
+  color: var(--boms-color-success-text);
+}
+
+.manager-banner--danger {
+  background: var(--boms-color-danger-bg);
+  color: var(--boms-color-danger-text);
+}
+
+.manager-banner--warning {
+  background: var(--boms-color-warning-bg);
+  color: var(--boms-color-warning-text);
+}
+
 .material-filters,
 .material-list {
   display: grid;
-  gap: 16px;
+  gap: var(--boms-space-3);
 }
 
 .material-card {
-  border: 1px solid #e3ddd2;
-  border-radius: 16px;
-  padding: 16px;
+  border: 1px solid var(--boms-color-border);
+  border-radius: var(--boms-radius-md);
+  padding: var(--boms-space-3) var(--boms-space-4);
   overflow-wrap: anywhere;
 }
 
 .material-copy {
   flex: 1;
   min-width: 0;
+}
+
+.material-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: normal;
 }
 
 .material-status-toggle {

@@ -1,81 +1,94 @@
 <template>
-  <q-card flat class="surface-card q-mb-lg">
-    <q-card-section class="row items-center justify-between q-gutter-sm">
-      <div
-        ><div class="section-label">Administration</div
-        ><h2 class="section-title q-my-none">Users and access</h2></div
+  <section class="user-management" aria-labelledby="staff-accounts-title">
+    <div class="user-management__header">
+      <h2 id="staff-accounts-title" class="section-title q-my-none"
+        >Staff accounts</h2
       >
       <q-btn
+        v-if="!hideTrigger"
         color="primary"
         icon="person_add"
         label="Add user"
         no-caps
+        unelevated
         @click="openCreate"
       />
-    </q-card-section>
-    <q-card-section class="q-pt-none">
-      <p
-        >Create staff accounts, assign roles, and deactivate access when someone
-        leaves.</p
-      >
-      <q-banner
-        v-if="notice"
-        rounded
-        class="bg-green-1 q-mb-md"
-        role="status"
-        >{{ notice }}</q-banner
-      >
-      <q-banner v-if="listError" rounded class="bg-red-1 q-mb-md" role="alert">
-        {{ listError }}
-        <template #action
-          ><q-btn flat label="Retry loading users" no-caps @click="loadUsers"
-        /></template>
-      </q-banner>
-      <q-input
-        v-model="search"
-        outlined
-        label="Search users by name or email"
-        clearable
-        class="q-mb-md"
-      />
-      <q-linear-progress
-        v-if="loading"
-        indeterminate
-        class="q-mb-md"
-        aria-label="Loading users"
-      />
-      <div class="user-grid">
-        <article v-for="user in filteredUsers" :key="user.id" class="user-card">
-          <div class="text-weight-bold"
-            >{{ user.full_name || 'Unnamed user' }}
-            <span v-if="user.id === authState.user?.id">(you)</span></div
+    </div>
+    <p class="user-management__intro"
+      >Create staff accounts, assign roles, and deactivate access when someone
+      leaves.</p
+    >
+    <q-banner
+      v-if="notice"
+      rounded
+      class="user-banner user-banner--success q-mb-md"
+      role="status"
+      >{{ notice }}</q-banner
+    >
+    <q-banner
+      v-if="listError"
+      rounded
+      class="user-banner user-banner--danger q-mb-md"
+      role="alert"
+    >
+      {{ listError }}
+      <template #action
+        ><q-btn flat label="Retry loading users" no-caps @click="loadUsers"
+      /></template>
+    </q-banner>
+    <q-input
+      v-model="search"
+      outlined
+      label="Search users by name or email"
+      clearable
+      class="q-mb-md"
+    />
+    <q-linear-progress
+      v-if="loading"
+      indeterminate
+      class="q-mb-md"
+      aria-label="Loading users"
+    />
+    <div class="user-grid">
+      <article v-for="user in filteredUsers" :key="user.id" class="user-card">
+        <h3 class="user-name"
+          >{{ user.full_name || 'Unnamed user' }}
+          <span v-if="user.id === authState.user?.id">(you)</span></h3
+        >
+        <div class="user-email">{{ user.email }}</div>
+        <div class="q-my-sm">{{ getRoleLabel(user.role) }}</div>
+        <div class="row items-center justify-between">
+          <span
+            class="status-chip"
+            :class="
+              user.is_active ? 'status-chip--success' : 'status-chip--neutral'
+            "
+            >{{ user.is_active ? 'Active' : 'Inactive' }}</span
           >
-          <div class="user-email">{{ user.email }}</div>
-          <div class="q-my-sm">{{ getRoleLabel(user.role) }}</div>
-          <div class="row items-center justify-between">
-            <q-chip :color="user.is_active ? 'green-1' : 'grey-3'">{{
-              user.is_active ? 'Active' : 'Inactive'
-            }}</q-chip>
-            <q-btn
-              flat
-              color="primary"
-              label="Edit access"
-              no-caps
-              :aria-label="`Edit access for ${user.full_name || user.email}`"
-              @click="openEdit(user)"
-            />
-          </div>
-        </article>
-      </div>
-      <p v-if="!loading && !listError && !filteredUsers.length" class="q-mt-md"
-        >No users match this search.</p
-      >
-    </q-card-section>
-  </q-card>
-  <q-dialog v-model="editorOpen" persistent :maximized="$q.screen.lt.sm">
+          <q-btn
+            flat
+            color="primary"
+            label="Edit access"
+            no-caps
+            :aria-label="`Edit access for ${user.full_name || user.email}`"
+            @click="openEdit(user)"
+          />
+        </div>
+      </article>
+    </div>
+    <p v-if="!loading && !listError && !filteredUsers.length" class="q-mt-md"
+      >No users match this search.</p
+    >
+  </section>
+  <q-dialog
+    v-model="editorOpen"
+    persistent
+    :maximized="$q.screen.lt.sm"
+    aria-labelledby="user-editor-title"
+  >
     <q-card class="user-editor">
-      <q-card-section class="row items-center justify-between">
-        <h2 class="text-h6 q-my-none">{{
+      <q-card-section class="user-editor__header">
+        <h2 id="user-editor-title" class="user-editor__title">{{
           form.id ? 'Edit user access' : 'Add user'
         }}</h2>
         <q-btn
@@ -87,16 +100,28 @@
           @click="closeEditor"
         />
       </q-card-section>
-      <q-form @submit.prevent="saveUser">
+      <q-form
+        ref="formRef"
+        greedy
+        no-error-focus
+        @submit.prevent="saveUser"
+        @validation-error="onInvalid"
+      >
         <q-card-section class="q-gutter-md">
-          <q-banner v-if="saveError" rounded class="bg-red-1" role="alert">{{
-            saveError
-          }}</q-banner>
+          <FormErrorSummary ref="summaryRef" :errors="formErrors" />
+          <q-banner
+            v-if="saveError"
+            rounded
+            class="user-banner user-banner--danger"
+            role="alert"
+            >{{ saveError }}</q-banner
+          >
           <q-input
             v-model="form.fullName"
             outlined
+            for="user-full-name"
             label="Full name"
-            autocomplete="name"
+            autocomplete="off"
             :rules="[required]"
             :disable="saving"
             maxlength="120"
@@ -104,6 +129,7 @@
           <q-input
             v-model="form.email"
             outlined
+            for="user-email"
             label="Email address"
             type="email"
             autocomplete="off"
@@ -120,13 +146,14 @@
           <q-select
             v-model="form.role"
             outlined
+            for="user-role"
             label="User role"
             :options="ROLE_OPTIONS"
             emit-value
             map-options
             :rules="[required]"
             :disable="saving || editingSelf"
-            behavior="dialog"
+            :behavior="selectBehavior"
           />
           <q-toggle
             v-model="form.isActive"
@@ -141,6 +168,7 @@
           <q-input
             v-model="form.password"
             outlined
+            for="user-password"
             :label="form.id ? 'New password (optional)' : 'Initial password'"
             type="password"
             autocomplete="new-password"
@@ -179,14 +207,32 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { apiRequest } from '@/lib/api'
 import { required } from '@/lib/validation'
 import { ROLE_OPTIONS, getRoleLabel } from '@/constants/roles'
 import { authState, signOut } from '@/services/auth'
+import { collectFieldErrors, useFormErrors } from '@/composables/useFormErrors'
+import FormErrorSummary from './FormErrorSummary.vue'
 
+defineProps({
+  /** Hide the built-in "Add user" button (the page header owns it). */
+  hideTrigger: Boolean
+})
+
+const $q = useQuasar()
 const router = useRouter()
+// MF-17: touch-friendly dialog pickers on phones, keyboard menus elsewhere.
+const selectBehavior = computed(() => ($q.screen.lt.sm ? 'dialog' : 'menu'))
+const formRef = ref(null)
+const {
+  errors: formErrors,
+  summaryRef,
+  fail,
+  clear: clearErrors
+} = useFormErrors()
 const users = ref([]),
   search = ref(''),
   loading = ref(false),
@@ -217,6 +263,10 @@ const passwordRule = value =>
   (form.id && !value) ||
   (value.length >= 12 && new TextEncoder().encode(value).length <= 72) ||
   'Use at least 12 characters and at most 72 bytes.'
+async function onInvalid() {
+  await nextTick()
+  await fail(collectFieldErrors(formRef))
+}
 async function loadUsers() {
   loading.value = true
   listError.value = ''
@@ -238,6 +288,7 @@ function openCreate() {
     password: ''
   })
   saveError.value = ''
+  clearErrors()
   editorOpen.value = true
 }
 function openEdit(user) {
@@ -250,10 +301,12 @@ function openEdit(user) {
     password: ''
   })
   saveError.value = ''
+  clearErrors()
   editorOpen.value = true
 }
 function closeEditor() {
   form.password = ''
+  clearErrors()
   editorOpen.value = false
 }
 async function saveUser() {
@@ -261,6 +314,7 @@ async function saveUser() {
   saving.value = true
   saveError.value = ''
   notice.value = ''
+  clearErrors()
   const resetsOwnPassword = editingSelf.value && !!form.password
   const body = {
     fullName: form.fullName.trim(),
@@ -296,23 +350,49 @@ async function saveUser() {
   }
 }
 onMounted(loadUsers)
+
+defineExpose({ openCreate })
 </script>
 
 <style scoped>
-.section-title {
-  font-size: 1.5rem;
-  line-height: 1.3;
+.user-management__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--boms-space-2);
+}
+.user-management__intro {
+  margin: var(--boms-space-2) 0 var(--boms-space-4);
+  color: var(--boms-color-text-muted);
+}
+.user-banner--success {
+  background: var(--boms-color-success-bg);
+  color: var(--boms-color-success-text);
+}
+.user-banner--danger {
+  background: var(--boms-color-danger-bg);
+  color: var(--boms-color-danger-text);
 }
 .user-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: 16px;
+  gap: var(--boms-space-3);
 }
 .user-card {
-  border: 1px solid #eadfce;
-  border-radius: 16px;
-  padding: 16px;
+  border: 1px solid var(--boms-color-border);
+  border-radius: var(--boms-radius-md);
+  background: var(--boms-color-surface);
+  padding: var(--boms-space-3) var(--boms-space-4);
   min-width: 0;
+}
+.user-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
 }
 .user-email {
   overflow-wrap: anywhere;
@@ -320,6 +400,20 @@ onMounted(loadUsers)
 .user-editor {
   width: 600px;
   max-width: 100%;
+}
+.user-editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--boms-space-2);
+}
+.user-editor__title {
+  margin: 0;
+  color: var(--boms-color-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: normal;
 }
 .user-active-toggle {
   min-height: 44px;

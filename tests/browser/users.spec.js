@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test'
+import { expectNoHorizontalOverflow, serveLocalFonts } from './support/index.js'
 
 for (const width of [375, 1280])
   test(`administrator creates and manages users at ${width}px`, async ({
     page
   }) => {
     await page.setViewportSize({ width, height: 844 })
+    await serveLocalFonts(page)
     const admin = {
       id: '00000000-0000-4000-8000-000000000001',
       email: 'admin@example.invalid',
@@ -54,13 +56,28 @@ for (const width of [375, 1280])
     })
     await page.goto('/#/admin')
     await expect(
-      page.getByRole('heading', { name: 'Users and access' })
+      page.getByRole('heading', { level: 1, name: 'Users & access' })
     ).toBeVisible()
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Staff accounts' })
+    ).toBeVisible()
+    // Diagnostics stay available but collapsed out of the primary task.
+    await expect(page.getByText('Session details')).toBeVisible()
+    await expect(
+      page.getByRole('main').getByText('Signed in as', { exact: true })
+    ).toBeHidden()
     await page.getByRole('button', { name: 'Add user', exact: true }).click()
+    await expect(
+      page.getByRole('dialog').getByRole('heading', { name: 'Add user' })
+    ).toBeVisible()
     await page.getByRole('button', { name: 'Create user', exact: true }).click()
     await expect(
       page.getByText('This field is required.').first()
     ).toBeVisible()
+    await expect(
+      page.locator('.form-error-summary').getByRole('link')
+    ).toHaveCount(3)
+    await expect(page.getByLabel('Full name', { exact: true })).toBeFocused()
     expect(submitted).toHaveLength(0)
     await page.getByLabel('Full name', { exact: true }).fill('New colleague')
     await page
@@ -102,11 +119,7 @@ for (const width of [375, 1280])
     await expect(page.getByText('Inactive', { exact: true })).toBeVisible()
     await page.getByLabel('Search users by name or email').fill('colleague')
     await expect(page.locator('.user-card')).toHaveCount(1)
-    await expect
-      .poll(() =>
-        page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
-      )
-      .toBe(true)
+    await expectNoHorizontalOverflow(page)
     await page.screenshot({
       path: `test-results/${width}-users.png`,
       fullPage: true

@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { validateAction } from '../../server/validation.ts'
 
+async function openHeaderAction(page, label) {
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await page.locator('.q-menu .q-item').filter({ hasText: label }).click()
+}
+
 for (const width of [375, 1280])
   test(`add suppliers and retailers and select them at ${width}px`, async ({
     page
@@ -138,13 +143,19 @@ for (const width of [375, 1280])
       return route.fulfill({ status: 404 })
     })
     await page.goto('/#/operations')
-    await page
-      .getByRole('button', { name: 'Add supplier', exact: true })
-      .click()
+    await openHeaderAction(page, 'Add supplier')
     await page
       .getByRole('button', { name: 'Save supplier', exact: true })
       .click()
-    await expect(page.getByText('This field is required.')).toBeVisible()
+    // MF-10: the summary lists the error and focus moves to the first field.
+    await expect(
+      page
+        .getByRole('alert')
+        .getByRole('link', { name: 'Supplier name: This field is required.' })
+    ).toBeVisible()
+    await expect(
+      page.getByLabel('Supplier name', { exact: true })
+    ).toBeFocused()
     expect(requests).toHaveLength(0)
     await page
       .getByLabel('Supplier name', { exact: true })
@@ -169,9 +180,7 @@ for (const width of [375, 1280])
     await expect(page.getByLabel('Supplier', { exact: true })).toHaveValue(
       /Added honey supplier/
     )
-    await page
-      .getByRole('button', { name: 'Manage suppliers', exact: true })
-      .click()
+    await openHeaderAction(page, 'Manage suppliers')
     await page
       .getByLabel('Search suppliers', { exact: true })
       .fill('0700000000')
@@ -205,9 +214,13 @@ for (const width of [375, 1280])
     })
     await page.getByRole('button', { name: 'Close supplier profiles' }).click()
     await page.goto('/#/retail')
-    await page
-      .getByRole('button', { name: 'Add retailer', exact: true })
-      .click()
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Warehouse and retail stock'
+      })
+    ).toBeVisible()
+    await openHeaderAction(page, 'Add retailer')
     await page
       .getByLabel('Retailer name', { exact: true })
       .fill('Added retail shop')
@@ -222,9 +235,7 @@ for (const width of [375, 1280])
     await expect(
       page.getByLabel('Retail partner', { exact: true })
     ).toHaveValue(/Added retail shop/)
-    await page
-      .getByRole('button', { name: 'Manage retailers', exact: true })
-      .click()
+    await openHeaderAction(page, 'Manage retailers')
     await page.getByLabel('Search retailers', { exact: true }).fill('Ntinda')
     await page
       .getByRole('button', { name: 'View and edit Added retail shop' })

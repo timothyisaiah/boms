@@ -1,22 +1,21 @@
 import { apiRequest } from '@/lib/api'
+import { fetchWorkspaceSummary } from '@/services/history'
 import { writeAction } from '@/services/writes'
 
-function clonePreviewWorkspace() {
+/**
+ * Empty finance summary used as `useWorkspace` initialData so templates can
+ * render before the first response. It is never presented as live data.
+ */
+export function emptyFinanceSummary() {
   return {
-    mode: 'unavailable',
     retailers: [],
     openIssueLines: [],
-    reconciliations: [],
-    remittances: [],
-    expenses: [],
+    reconciliationOptions: [],
     retailerBalances: [],
     pricing: [],
-    profitSummary: {}
+    profitSummary: {},
+    historyCounts: {}
   }
-}
-
-export function getPreviewFinanceWorkspace() {
-  return clonePreviewWorkspace()
 }
 
 export function formatFinanceError(error, fallbackMessage) {
@@ -43,8 +42,18 @@ export function formatFinanceError(error, fallbackMessage) {
   return fallbackMessage
 }
 
+/** Full finance workspace (unbounded histories); kept for other callers. */
 export function fetchFinanceWorkspace() {
   return apiRequest('workspace?name=finance')
+}
+
+/**
+ * Finance summary view: open issue lines, pricing, balances, profit summary,
+ * `reconciliationOptions` and `historyCounts`, without the history arrays
+ * (docs/audits/history-api.md §3). Histories come from /api/history.
+ */
+export function fetchFinanceSummary(options = {}) {
+  return fetchWorkspaceSummary('finance', options)
 }
 export function recordRetailReconciliation(payload) {
   return writeAction('reconciliations', payload)

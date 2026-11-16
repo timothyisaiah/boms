@@ -1,5 +1,9 @@
 <template>
-  <q-layout view="hHh Lpr lFf" class="shell-layout">
+  <q-layout
+    view="hHh Lpr lFf"
+    class="shell-layout"
+    :class="{ 'shell-layout--bottom-nav': showBottomNav }"
+  >
     <q-header class="shell-header">
       <q-toolbar class="q-px-md q-py-sm q-px-lg-md">
         <q-btn
@@ -9,6 +13,7 @@
           icon="menu"
           color="brown-10"
           aria-label="Toggle navigation"
+          :aria-expanded="leftDrawerOpen ? 'true' : 'false'"
           @click="toggleLeftDrawer"
         />
 
@@ -60,7 +65,7 @@
 
     <q-drawer
       v-model="leftDrawerOpen"
-      :breakpoint="1024"
+      :behavior="isCompact ? 'mobile' : 'desktop'"
       show-if-above
       bordered
       :width="280"
@@ -70,32 +75,52 @@
         <div class="drawer-summary__label">Signed in as</div>
         <div class="drawer-summary__name">{{ userName }}</div>
         <div class="drawer-summary__email">{{ authState.user?.email }}</div>
+        <q-chip
+          square
+          dense
+          color="amber-2"
+          text-color="brown-10"
+          icon="verified_user"
+          class="q-ml-none q-mt-sm"
+        >
+          {{ roleLabel }}
+        </q-chip>
       </div>
 
-      <q-list padding class="drawer-nav">
-        <q-item-label header class="drawer-nav__header">
-          Workspaces
-        </q-item-label>
-
-        <q-item
-          v-for="item in navigationItems"
-          :key="item.to"
-          clickable
-          :to="item.to"
-          class="drawer-link"
-          active-class="drawer-link--active"
-          @click="leftDrawerOpen = false"
+      <nav aria-label="All destinations">
+        <q-list
+          v-for="section in drawerSections"
+          :key="section.key"
+          padding
+          class="drawer-nav"
+          :data-section="section.key"
         >
-          <q-item-section avatar>
-            <q-icon :name="item.icon" />
-          </q-item-section>
+          <q-item-label header class="drawer-nav__header">
+            {{ section.label }}
+          </q-item-label>
 
-          <q-item-section>
-            <q-item-label>{{ item.label }}</q-item-label>
-            <q-item-label caption>{{ item.caption }}</q-item-label>
-          </q-item-section>
-        </q-item>
-      </q-list>
+          <q-item
+            v-for="item in section.items"
+            :key="item.name"
+            clickable
+            :to="item.path"
+            exact
+            class="drawer-link"
+            active-class="drawer-link--active"
+            :data-destination="item.name"
+            @click="closeDrawerIfOverlay"
+          >
+            <q-item-section avatar>
+              <q-icon :name="item.icon" />
+            </q-item-section>
+
+            <q-item-section>
+              <q-item-label>{{ item.label }}</q-item-label>
+              <q-item-label caption>{{ item.caption }}</q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </nav>
       <q-btn
         flat
         no-caps
@@ -119,77 +144,90 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <q-footer v-if="showBottomNav" bordered class="shell-bottom-nav">
+      <nav aria-label="Primary">
+        <q-tabs
+          :model-value="activeTab"
+          no-caps
+          align="justify"
+          indicator-color="primary"
+          active-color="primary"
+          class="shell-bottom-nav__tabs"
+          @update:model-value="ignoreTabModel"
+        >
+          <template v-for="item in bottomItems" :key="item.name">
+            <q-tab
+              v-if="item.more"
+              :name="item.name"
+              :icon="item.icon"
+              :label="item.label"
+              aria-haspopup="true"
+              :aria-expanded="leftDrawerOpen ? 'true' : 'false'"
+              data-destination="more"
+              class="shell-bottom-nav__tab"
+              @click="leftDrawerOpen = true"
+            />
+            <q-route-tab
+              v-else
+              :name="item.name"
+              :to="item.path"
+              exact
+              :icon="item.icon"
+              :label="item.label"
+              :aria-current="activeTab === item.name ? 'page' : undefined"
+              :data-destination="item.name"
+              class="shell-bottom-nav__tab"
+            />
+          </template>
+        </q-tabs>
+      </nav>
+    </q-footer>
   </q-layout>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import { getRoleLabel, hasAllowedRole } from '@/constants/roles'
+import { getRoleLabel } from '@/constants/roles'
+import { primaryDestinations, routesForRole } from '@/constants/capabilities'
 import { authState, signOut } from '@/services/auth'
 
+// Below Quasar's md breakpoint (1024px) the drawer is an overlay and the
+// bottom navigation carries the primary destinations; at 1024px and above the
+// drawer is persistent and the bottom navigation is hidden. Both are driven by
+// the same signal so there is no width where neither is available.
+const COMPACT_BELOW = 1024
+
+const $q = useQuasar()
 const leftDrawerOpen = ref(false)
 const isSigningOut = ref(false)
 const route = useRoute()
 const router = useRouter()
 
-const allNavigationItems = [
-  {
-    label: 'Dashboard',
-    caption: 'KPIs, monthly review, and watchlists',
-    icon: 'space_dashboard',
-    to: '/'
-  },
-  {
-    label: 'Operations',
-    caption: 'Purchases, lots, and batches',
-    icon: 'warehouse',
-    to: '/operations',
-    allowedRoles: [
-      'admin_owner',
-      'operations_manager',
-      'production_staff',
-      'warehouse_staff'
-    ]
-  },
-  {
-    label: 'Distribution',
-    caption: 'Warehouse stock and dispatch',
-    icon: 'storefront',
-    to: '/retail',
-    allowedRoles: [
-      'admin_owner',
-      'operations_manager',
-      'warehouse_staff',
-      'sales_or_distribution_staff',
-      'finance_accountant'
-    ]
-  },
-  {
-    label: 'Finance',
-    caption: 'Reconciliation, cash, and margin',
-    icon: 'payments',
-    to: '/finance',
-    allowedRoles: [
-      'admin_owner',
-      'operations_manager',
-      'finance_accountant',
-      'read_only_management'
-    ]
-  },
-  {
-    label: 'Access & Settings',
-    caption: 'Roles and environment',
-    icon: 'manage_accounts',
-    to: '/admin',
-    allowedRoles: ['admin_owner']
-  }
-]
-
-const navigationItems = computed(() =>
-  allNavigationItems.filter(item =>
-    hasAllowedRole(authState.role, item.allowedRoles)
-  )
+const isCompact = computed(() => $q.screen.width < COMPACT_BELOW)
+const destinations = computed(() => routesForRole(authState.role))
+const drawerSections = computed(() =>
+  [
+    {
+      key: 'primary',
+      label: 'Workspaces',
+      items: destinations.value.filter(item => item.group === 'primary')
+    },
+    {
+      key: 'settings',
+      label: 'Settings',
+      items: destinations.value.filter(item => item.group === 'settings')
+    }
+  ].filter(section => section.items.length > 0)
+)
+const bottomItems = computed(() => primaryDestinations(authState.role))
+const showBottomNav = computed(
+  () => isCompact.value && bottomItems.value.length > 0
+)
+const activeTab = computed(() =>
+  bottomItems.value.some(item => item.name === route.name) ? route.name : null
 )
 const pageTitle = computed(() => route.meta.title ?? 'Dashboard')
 const userName = computed(() => {
@@ -204,6 +242,20 @@ const userName = computed(() => {
   return authState.user?.email?.split('@')[0] ?? 'Beecone teammate'
 })
 const roleLabel = computed(() => getRoleLabel(authState.role))
+
+// Browser back/forward and bottom-nav taps must not leave an overlay drawer
+// open over the new page.
+watch(
+  () => route.fullPath,
+  () => closeDrawerIfOverlay()
+)
+
+function closeDrawerIfOverlay() {
+  if (isCompact.value) leftDrawerOpen.value = false
+}
+
+// Route tabs follow the router; the "More" tab only opens the drawer.
+function ignoreTabModel() {}
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value
@@ -220,3 +272,38 @@ async function handleSignOut() {
   }
 }
 </script>
+
+<style lang="scss">
+// Shell-owned chrome for the bottom navigation (kept out of app.scss).
+// Unscoped because QFooter/QTabs render nested markup.
+.shell-bottom-nav {
+  background: var(--boms-color-chrome);
+  border-top: 1px solid var(--boms-color-border);
+  color: var(--boms-color-text-muted);
+  // Keep tabs clear of the home indicator / gesture area and side cutouts.
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.shell-bottom-nav__tabs .q-tabs__content {
+  min-height: 56px;
+}
+
+.shell-bottom-nav__tab {
+  min-height: 56px;
+  min-width: 48px;
+  padding: 4px;
+  flex: 1 1 0;
+
+  .q-tab__label {
+    font-size: 0.75rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .q-tab__icon {
+    font-size: 22px;
+  }
+}
+</style>

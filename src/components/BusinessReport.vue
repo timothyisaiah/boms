@@ -1,23 +1,25 @@
 <template>
-  <q-card flat class="surface-card q-mt-lg">
-    <q-card-section>
-      <div class="section-label">{{
+  <section class="surface-card business-report" :aria-labelledby="titleId">
+    <header class="business-report__header">
+      <h2 :id="titleId" class="section-title business-report__title">{{
         weekly ? 'Weekly operations' : 'Monthly business review'
-      }}</div>
-      <h2 class="section-title">{{
+      }}</h2>
+      <p class="business-report__intro">{{
         weekly
           ? 'Movement, collections and stock health'
           : 'Valuation, profitability and retailer performance'
-      }}</h2>
+      }}</p>
+    </header>
+    <div class="business-report__controls">
       <q-input
         v-if="weekly"
         v-model="selectedDate"
         outlined
         type="date"
         label="Week containing"
-        class="q-mt-md"
+        class="business-report__date"
       />
-      <p class="text-caption q-mt-sm"
+      <p class="business-report__period"
         >{{ range.start }} to {{ lastDay }} · Uganda time{{
           isCurrentPeriod ? ' · Period to date' : ''
         }}</p
@@ -27,24 +29,37 @@
         indeterminate
         aria-label="Loading report"
       />
-      <q-banner v-if="error" class="bg-orange-1" role="alert"
-        >{{ error
-        }}<template #action
-          ><q-btn flat label="Retry report" @click="load" /></template
-      ></q-banner>
-    </q-card-section>
+      <div v-if="error" class="business-report__error" role="alert">
+        <q-icon name="error_outline" size="20px" aria-hidden="true" />
+        <p class="business-report__error-text">{{ error }}</p>
+        <q-btn
+          outline
+          no-caps
+          color="primary"
+          icon="refresh"
+          label="Retry report"
+          @click="load"
+        />
+      </div>
+    </div>
     <template v-if="report">
-      <q-card-section v-if="!weekly && report.profit" class="detail-list">
+      <dl
+        v-if="!weekly && report.profit"
+        class="business-report__profit"
+        aria-label="Profit for the month"
+      >
         <div
           v-for="column in profitColumns.filter(
             c => report.profit[c.field] !== undefined
           )"
           :key="column.field"
-          class="detail-row"
-          ><span>{{ column.label }}</span
-          ><strong>{{ money(report.profit[column.field]) }}</strong></div
+          class="business-report__profit-row"
+          ><dt>{{ column.label }}</dt
+          ><dd class="tabular-nums">{{
+            money(report.profit[column.field])
+          }}</dd></div
         >
-      </q-card-section>
+      </dl>
       <q-expansion-item
         v-for="section in sections"
         :key="section.key"
@@ -53,19 +68,19 @@
         :default-opened="weekly && section.key === 'digest'"
         expand-separator
       >
-        <q-card-section>
+        <div class="business-report__section">
           <template v-if="section.key === 'digest'">
-            <h3 class="text-subtitle1">Low materials</h3
+            <h3 class="business-report__subtitle">Low materials</h3
             ><ReportList
               :rows="report.digest.materials"
               :columns="materialColumns"
             />
-            <h3 class="text-subtitle1">Low warehouse stock</h3
+            <h3 class="business-report__subtitle">Low warehouse stock</h3
             ><ReportList
               :rows="report.digest.variants"
               :columns="variantColumns"
             />
-            <h3 class="text-subtitle1"
+            <h3 class="business-report__subtitle"
               >Expired, expiring within 30 days, or expiry not recorded</h3
             ><p class="text-caption"
               >Includes stock held on consignment. A missing expiry needs
@@ -80,17 +95,23 @@
             :rows="report[section.key] ?? []"
             :columns="section.columns"
           />
-        </q-card-section>
+        </div>
       </q-expansion-item>
     </template>
-  </q-card>
+  </section>
 </template>
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
+import { can } from '@/constants/capabilities'
 import { apiRequest } from '@/lib/api'
 import { authState } from '@/services/auth'
 import ReportList from './ReportList.vue'
 const props = defineProps({ weekly: Boolean, month: String })
+const titleId = useId()
+// api/reports.ts withholds aging/reconciliation sections outside REVIEW and
+// expenses outside FINANCE; these capabilities carry the same role sets.
+const canSeeReview = computed(() => can(authState.role, 'read:finance'))
+const canSeeExpenses = computed(() => can(authState.role, 'route:finance'))
 const selectedDate = ref(
   new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Kampala' })
 )
@@ -169,13 +190,7 @@ const sections = computed(() =>
             moneyCol('value', 'Historical cost')
           ]
         },
-        ...([
-          'admin_owner',
-          'operations_manager',
-          'sales_or_distribution_staff',
-          'finance_accountant',
-          'read_only_management'
-        ].includes(authState.role)
+        ...(canSeeReview.value
           ? [
               {
                 key: 'aging',
@@ -248,12 +263,7 @@ const sections = computed(() =>
             col('linked_payment_days', 'Payment days')
           ]
         },
-        ...([
-          'admin_owner',
-          'operations_manager',
-          'finance_accountant',
-          'read_only_management'
-        ].includes(authState.role)
+        ...(canSeeExpenses.value
           ? [
               {
                 key: 'expenses',
@@ -292,3 +302,95 @@ async function load() {
 }
 watch(range, load, { immediate: true })
 </script>
+<style scoped>
+.business-report {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.business-report__header,
+.business-report__controls {
+  padding: 0 var(--boms-space-4);
+}
+.business-report__header {
+  padding-top: var(--boms-space-4);
+}
+.business-report__controls {
+  display: grid;
+  gap: var(--boms-space-2);
+  padding-top: var(--boms-space-2);
+  padding-bottom: var(--boms-space-3);
+}
+.business-report__title {
+  margin: 0;
+  color: var(--boms-color-heading);
+}
+.business-report__intro {
+  margin: var(--boms-space-1) 0 0;
+  color: var(--boms-color-text-muted);
+  font-size: 0.875rem;
+}
+.business-report__date {
+  max-width: 20rem;
+}
+.business-report__period {
+  margin: 0;
+  color: var(--boms-color-text-muted);
+  font-size: 0.8125rem;
+}
+.business-report__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--boms-space-2) var(--boms-space-3);
+  padding: var(--boms-space-3);
+  border: 1px solid var(--boms-color-warning-border);
+  border-radius: var(--boms-radius-md);
+  background: var(--boms-color-warning-bg);
+  color: var(--boms-color-warning-text);
+}
+.business-report__error-text {
+  flex: 1 1 12rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.business-report__profit {
+  display: grid;
+  margin: 0;
+  padding: 0 var(--boms-space-4) var(--boms-space-3);
+}
+.business-report__profit-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--boms-space-1) var(--boms-space-3);
+  padding: var(--boms-space-2) 0;
+  border-top: 1px solid var(--boms-color-border);
+}
+.business-report__profit-row dd {
+  margin: 0;
+  color: var(--boms-color-heading);
+  font-weight: 700;
+}
+.business-report__subtitle {
+  margin: var(--boms-space-3) 0 var(--boms-space-2);
+  color: var(--boms-color-heading);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.business-report__section {
+  padding: var(--boms-space-3) var(--boms-space-4) var(--boms-space-4);
+}
+.business-report__subtitle:first-child {
+  margin-top: 0;
+}
+@media (max-width: 599px) {
+  .business-report__header,
+  .business-report__controls,
+  .business-report__profit {
+    padding-left: var(--boms-space-3);
+    padding-right: var(--boms-space-3);
+  }
+}
+</style>

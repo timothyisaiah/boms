@@ -1,6 +1,7 @@
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
+import { realpathSync } from 'node:fs'
 import { defineConfig } from '#q-app'
 
 export default defineConfig(ctx => {
@@ -46,7 +47,7 @@ export default defineConfig(ctx => {
       // https://v2.quasar.dev/quasar-cli-vite/page-routing-with-vue-router#filename-based-routing
       // filenameBasedRouting: true,
 
-      vueRouterMode: 'hash' // available values: 'hash', 'history'
+      vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
 
       // publicPath: '/',
@@ -56,7 +57,20 @@ export default defineConfig(ctx => {
       // minify: false,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      // Keep Vite's dependency cache per checkout so parallel worktrees that
+      // share node_modules do not overwrite each other's pre-bundled deps.
+      extendViteConf(viteConf) {
+        viteConf.cacheDir = '.quasar/vite-cache'
+        // A worktree may link node_modules to a shared checkout; let the dev
+        // server read fonts/icons through that link as well as the project.
+        const shared = realpathSync('node_modules')
+        viteConf.server ??= {}
+        viteConf.server.fs ??= {}
+        viteConf.server.fs.allow = [
+          ...(viteConf.server.fs.allow ?? [process.cwd()]),
+          shared
+        ]
+      }
       // viteVuePluginOptions: {},
 
       // vitePlugins: [
