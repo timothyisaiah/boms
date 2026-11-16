@@ -4,7 +4,6 @@
       <h2 :id="balancesId" class="section-title finance-snapshot__title">
         Retailer balances
       </h2>
-      <p class="finance-snapshot__lead">Follow-up status per retailer.</p>
 
       <ul v-if="balances.length" class="finance-snapshot__balances">
         <li
@@ -66,9 +65,8 @@
 
     <section class="finance-snapshot__section" :aria-labelledby="profitId">
       <h2 :id="profitId" class="section-title finance-snapshot__title">
-        Gross profit picture
+        Profit and loss
       </h2>
-      <p class="finance-snapshot__lead">How the current picture is built.</p>
       <dl class="finance-snapshot__profit">
         <div v-for="row in profitRows" :key="row.label">
           <dt>{{ row.label }}</dt>
@@ -144,11 +142,7 @@ const profitRows = computed(() => {
   min-width: 0;
 }
 .finance-snapshot__title {
-  margin: 0;
-}
-.finance-snapshot__lead {
-  margin: var(--boms-space-1) 0 var(--boms-space-4);
-  color: var(--boms-color-text-muted);
+  margin: 0 0 var(--boms-space-4);
 }
 .finance-snapshot__balances {
   display: flex;

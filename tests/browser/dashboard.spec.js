@@ -199,7 +199,7 @@ for (const [size, viewport] of Object.entries({
     await gotoRoute(page, '/')
     if (size === 'phone') {
       const toggle = page.getByRole('button', {
-        name: 'Explore monthly trends'
+        name: 'Show trends'
       })
       await expect(toggle).toHaveAttribute('aria-expanded', 'false')
       await toggle.click()

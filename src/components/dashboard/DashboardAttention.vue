@@ -7,9 +7,6 @@
       <h2 id="attention-title" class="section-title dash-panel__title">
         What needs attention now
       </h2>
-      <p class="dash-panel__intro">
-        Collections, in-store stock and open lots to act on.
-      </p>
     </header>
 
     <div class="attention__groups">

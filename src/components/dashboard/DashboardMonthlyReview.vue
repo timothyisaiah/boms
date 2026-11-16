@@ -34,7 +34,7 @@
       <div class="review__columns">
         <section aria-labelledby="dashboard-review-notes">
           <h3 id="dashboard-review-notes" class="review__subtitle">
-            What stands out in the month
+            Highlights
           </h3>
           <ul class="dash-rows" role="list">
             <li
@@ -50,7 +50,7 @@
 
         <section aria-labelledby="dashboard-review-lines">
           <h3 id="dashboard-review-lines" class="review__subtitle">
-            Core review lines
+            Month totals
           </h3>
           <dl class="review__lines">
             <div v-for="row in breakdown" :key="row.label" class="review__line">

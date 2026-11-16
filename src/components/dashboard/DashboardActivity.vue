@@ -5,7 +5,7 @@
   >
     <header class="dash-panel__header">
       <h2 id="dashboard-activity-title" class="section-title dash-panel__title">
-        Latest posted work
+        Recent activity
       </h2>
     </header>
 

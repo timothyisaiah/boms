@@ -2,7 +2,7 @@
   <div class="retail-snapshot">
     <section class="retail-snapshot__section" aria-labelledby="snapshot-stock">
       <h2 id="snapshot-stock" class="section-title retail-snapshot__title">
-        Finished jars available by batch
+        Open finished stock by batch
       </h2>
       <ul v-if="openFinishedStock.length > 0" class="retail-snapshot__list">
         <li
@@ -46,7 +46,7 @@
       data-retailer-balances
     >
       <h2 id="snapshot-balances" class="section-title retail-snapshot__title">
-        What each partner is currently holding
+        Retailer stock on consignment
       </h2>
       <ul v-if="balances.length > 0" class="retail-snapshot__list">
         <li
@@ -73,16 +73,14 @@
               {{ formatQuantity(line.quantity) }} jars
             </li>
           </ul>
-          <p v-else class="retail-snapshot__caption">
-            No open retail stock movements yet.
-          </p>
+          <p v-else class="retail-snapshot__caption"> No stock in store. </p>
         </li>
       </ul>
       <EmptyState
         v-else-if="ready"
         icon="storefront"
         title="No retailer balances yet"
-        message="Retail balances will appear here after the first stock issue is posted to a partner."
+        message="Balances start with the first stock issue to a retailer."
       />
       <q-skeleton v-else type="rect" height="72px" />
     </section>
@@ -96,7 +94,7 @@
           id="snapshot-movements"
           class="section-title retail-snapshot__title"
         >
-          Recent retailer ledger entries
+          Recent movements
         </h2>
         <q-btn
           flat
@@ -145,7 +143,7 @@
         v-else-if="recentLoaded && !recentError"
         icon="swap_horiz"
         title="No movements yet"
-        message="Retail movement history will start once warehouse stock is issued to a partner."
+        message="Movements start with the first stock issue to a retailer."
       />
       <q-skeleton v-else-if="!recentError" type="rect" height="72px" />
     </section>

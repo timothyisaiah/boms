@@ -885,7 +885,7 @@ export function buildMonthlyReviewStats(access, month) {
   return stats.slice(0, 6)
 }
 
-/** "What stands out" notes; `tone` is a status-chip tone (src/lib/status.js). */
+/** "Highlights" notes; `tone` is a status-chip tone (src/lib/status.js). */
 export function buildMonthlyNotes(access, month) {
   if (!month) {
     return []
@@ -957,7 +957,7 @@ export function buildMonthlyNotes(access, month) {
   return notes.slice(0, 4)
 }
 
-/** "Core review lines" label/value rows. */
+/** "Month totals" label/value rows. */
 export function buildMonthlyBreakdown(access, month) {
   if (!month) {
     return []
