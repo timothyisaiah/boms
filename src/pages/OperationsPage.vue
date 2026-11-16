@@ -539,7 +539,7 @@ function discardBatchDraft() {
 
 @media (max-width: 1023.98px) {
   /* MainLayout's phone footer is 56px tall. Keep the sticky submit action
-     above it; the older `.form-footer` rule does not cover FormActionBar. */
+     above it. */
   .operations-page :deep(.form-action-bar--sticky) {
     bottom: calc(56px + var(--boms-safe-bottom));
   }

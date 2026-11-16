@@ -214,6 +214,12 @@ for (const width of [375, 1280])
     })
     await page.getByRole('button', { name: 'Close supplier profiles' }).click()
     await page.goto('/#/retail')
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Warehouse and retail stock'
+      })
+    ).toBeVisible()
     await openHeaderAction(page, 'Add retailer')
     await page
       .getByLabel('Retailer name', { exact: true })

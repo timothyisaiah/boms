@@ -277,10 +277,9 @@ async function handleSignOut() {
 // Shell-owned chrome for the bottom navigation (kept out of app.scss).
 // Unscoped because QFooter/QTabs render nested markup.
 .shell-bottom-nav {
-  background: rgba(255, 248, 235, 0.97);
-  backdrop-filter: blur(18px);
-  border-top: 1px solid rgba(122, 86, 37, 0.14);
-  color: rgba(32, 22, 13, 0.78);
+  background: var(--boms-color-chrome);
+  border-top: 1px solid var(--boms-color-border);
+  color: var(--boms-color-text-muted);
   // Keep tabs clear of the home indicator / gesture area and side cutouts.
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
@@ -306,11 +305,5 @@ async function handleSignOut() {
   .q-tab__icon {
     font-size: 22px;
   }
-}
-
-// Sticky form actions stick to the viewport bottom; lift them above the bottom
-// bar (whose height already includes the safe-area inset) so they stay visible.
-.shell-layout--bottom-nav .form-footer {
-  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
 }
 </style>

@@ -187,11 +187,13 @@ for (const role of ROLES) {
         .locator('.q-page-container')
         .evaluate(el => parseFloat(getComputedStyle(el).paddingBottom))
       expect(padding).toBeGreaterThanOrEqual(footerHeight - 1)
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= window.innerWidth
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth
+          )
         )
-      ).toBe(true)
+        .toBe(true)
     }
 
     // The overlay drawer lists every destination the role may open.
