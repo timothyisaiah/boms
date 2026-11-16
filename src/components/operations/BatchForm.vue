@@ -12,6 +12,31 @@
       one purchase receipt first.
     </p>
 
+    <SaveConfirmation
+      v-if="confirmation"
+      class="ops-form__confirmation"
+      :title="confirmation.title"
+      :details="confirmation.details"
+      @dismiss="emit('dismiss-confirmation')"
+    >
+      <q-btn
+        unelevated
+        no-caps
+        color="primary"
+        icon="add"
+        label="Create another batch"
+        @click="emit('another')"
+      />
+      <q-btn
+        flat
+        no-caps
+        color="primary"
+        icon="inventory_2"
+        label="View batches"
+        @click="emit('navigate', 'batches')"
+      />
+    </SaveConfirmation>
+
     <DraftNotice v-if="draftRestored" @discard="emit('discard-draft')" />
 
     <q-form
@@ -209,6 +234,7 @@ import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import FormActionBar from '@/components/FormActionBar.vue'
 import FormErrorSummary from '@/components/FormErrorSummary.vue'
+import SaveConfirmation from '@/components/SaveConfirmation.vue'
 import DraftNotice from '@/components/operations/DraftNotice.vue'
 import {
   collectFieldErrors,
@@ -226,9 +252,18 @@ const props = defineProps({
   submitting: { type: Boolean, default: false },
   /** Live data has no open lots: production cannot start yet. */
   needsLots: { type: Boolean, default: false },
-  draftRestored: { type: Boolean, default: false }
+  draftRestored: { type: Boolean, default: false },
+  /** `{ title, details }` after a successful save, else null. */
+  confirmation: { type: Object, default: null }
 })
-const emit = defineEmits(['submit', 'saved', 'discard-draft'])
+const emit = defineEmits([
+  'submit',
+  'saved',
+  'discard-draft',
+  'another',
+  'navigate',
+  'dismiss-confirmation'
+])
 
 const $q = useQuasar()
 const state = props.form.state
@@ -278,6 +313,9 @@ defineExpose({
 <style scoped>
 .ops-form__title {
   margin: 0;
+}
+.ops-form__confirmation {
+  margin: var(--boms-space-3) 0 0;
 }
 .ops-form__intro {
   margin: var(--boms-space-1) 0 0;

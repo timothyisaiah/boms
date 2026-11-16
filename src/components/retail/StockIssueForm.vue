@@ -7,6 +7,31 @@
       Issued stock stays on consignment until it is reconciled.
     </p>
 
+    <SaveConfirmation
+      v-if="confirmation"
+      class="stock-issue__confirmation"
+      :title="confirmation.title"
+      :details="confirmation.details"
+      @dismiss="confirmation = null"
+    >
+      <q-btn
+        unelevated
+        no-caps
+        color="primary"
+        icon="add"
+        label="Issue more stock"
+        @click="startAnother"
+      />
+      <q-btn
+        flat
+        no-caps
+        color="primary"
+        icon="local_shipping"
+        label="View dispatches"
+        @click="viewDispatches"
+      />
+    </SaveConfirmation>
+
     <p v-if="issueWriteMessage" class="stock-issue__notice" role="status">
       <q-icon name="info" size="16px" aria-hidden="true" />
       <span>{{ issueWriteMessage }}</span>
@@ -191,6 +216,7 @@ import { useQuasar } from 'quasar'
 import DirtyGuardDialog from '@/components/DirtyGuardDialog.vue'
 import FormActionBar from '@/components/FormActionBar.vue'
 import FormErrorSummary from '@/components/FormErrorSummary.vue'
+import SaveConfirmation from '@/components/SaveConfirmation.vue'
 import { useFormDraft } from '@/composables/useFormDraft'
 import {
   collectFieldErrors,
@@ -274,6 +300,8 @@ const { isDirty, restored, clearDraft } = useFormDraft(
 
 const { errors, summaryRef, fail, clear } = useFormErrors()
 const isSubmittingIssue = ref(false)
+// `{ title, details }` shown above the form after a successful save.
+const confirmation = ref(null)
 
 // Phones keep the full-screen option list; tablets and desktops use the menu.
 const selectBehavior = computed(() => ($q.screen.lt.sm ? 'dialog' : 'default'))
@@ -408,10 +436,42 @@ async function onValidationError() {
   await fail(collectFieldErrors(formRef))
 }
 
+/** Confirmation text for an issue, built before the form is reset. */
+function describeIssue() {
+  const retailer = props.retailers.find(
+    item => item.id === issueForm.retailerId
+  )
+  const details = []
+  if (issueForm.issueReference.trim())
+    details.push(`Dispatch reference ${issueForm.issueReference.trim()}.`)
+  details.push('Retailer stock and the movement ledger have been refreshed.')
+  return {
+    title: `${formatQuantity(estimatedIssueQuantity.value)} jars issued to ${retailer?.retailer_name ?? 'the retailer'}`,
+    details
+  }
+}
+
+// A confirmed retry posted the saved body, which may differ from what the
+// form shows now, so it is described generically.
 async function onRetrySaved() {
   resetIssueForm()
   clearDraft()
   await props.afterSave?.()
+  confirmation.value = {
+    title: 'Saved stock issue confirmed',
+    details: ['Retailer stock and the movement ledger have been refreshed.']
+  }
+}
+
+async function startAnother() {
+  confirmation.value = null
+  await nextTick()
+  focusField('stock-issue-retailer')
+}
+
+function viewDispatches() {
+  confirmation.value = null
+  emit('view-dispatches')
 }
 
 async function submitStockIssue() {
@@ -492,6 +552,7 @@ async function submitStockIssue() {
   }
 
   clear()
+  confirmation.value = null
   isSubmittingIssue.value = true
 
   try {
@@ -503,23 +564,11 @@ async function submitStockIssue() {
       items: normalizedItems
     })
 
-    $q.notify({
-      type: 'positive',
-      message:
-        'Stock issue recorded and retailer movement ledger updated successfully.',
-      actions: [
-        {
-          label: 'View dispatches',
-          color: 'white',
-          noCaps: true,
-          handler: () => emit('view-dispatches')
-        }
-      ]
-    })
-
+    const outcome = describeIssue()
     resetIssueForm()
     clearDraft()
     await props.afterSave?.()
+    confirmation.value = outcome
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -558,6 +607,9 @@ defineExpose({
   margin: var(--boms-space-1) 0 0;
   color: var(--boms-color-text-muted);
   font-size: 0.875rem;
+}
+.stock-issue__confirmation {
+  margin: var(--boms-space-3) 0 0;
 }
 .stock-issue__notice {
   display: flex;
