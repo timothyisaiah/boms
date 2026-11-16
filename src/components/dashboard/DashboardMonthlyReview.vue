@@ -24,7 +24,7 @@
     </div>
 
     <template v-if="hasData">
-      <DashboardMetricStrip
+      <MetricStrip
         title="Review summary"
         title-visible
         :heading-level="3"
@@ -34,7 +34,7 @@
       <div class="review__columns">
         <section aria-labelledby="dashboard-review-notes">
           <h3 id="dashboard-review-notes" class="review__subtitle">
-            What stands out in the month
+            Highlights
           </h3>
           <ul class="dash-rows" role="list">
             <li
@@ -42,9 +42,7 @@
               :key="note.title"
               class="dash-row review__note"
             >
-              <span class="status-chip" :class="`status-chip--${note.tone}`">
-                {{ note.title }}
-              </span>
+              <StatusBadge :tone="note.tone" :label="note.title" />
               <span class="review__note-text">{{ note.text }}</span>
             </li>
           </ul>
@@ -52,7 +50,7 @@
 
         <section aria-labelledby="dashboard-review-lines">
           <h3 id="dashboard-review-lines" class="review__subtitle">
-            Core review lines
+            Month totals
           </h3>
           <dl class="review__lines">
             <div v-for="row in breakdown" :key="row.label" class="review__line">
@@ -63,7 +61,7 @@
         </section>
       </div>
     </template>
-    <DashboardMetricStrip
+    <MetricStrip
       v-else-if="loading"
       title="Review summary"
       :heading-level="3"
@@ -74,7 +72,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import DashboardMetricStrip from './DashboardMetricStrip.vue'
+import MetricStrip from '@/components/MetricStrip.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
 import {
   buildMonthlyBreakdown,
   buildMonthlyNotes,

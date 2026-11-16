@@ -7,9 +7,6 @@
       <h2 id="attention-title" class="section-title dash-panel__title">
         What needs attention now
       </h2>
-      <p class="dash-panel__intro">
-        Collections, in-store stock and open lots to act on.
-      </p>
     </header>
 
     <div class="attention__groups">
@@ -32,12 +29,7 @@
               </span>
             </div>
             <div class="dash-row__end">
-              <span
-                class="status-chip"
-                :class="`status-chip--${item.statusTone}`"
-              >
-                {{ item.statusLabel }}
-              </span>
+              <StatusBadge :tone="item.statusTone" :label="item.statusLabel" />
               <span class="dash-row__value tabular-nums">
                 {{
                   item.outstandingAmount > 0
@@ -94,6 +86,7 @@
 
 <script setup>
 import EmptyState from '@/components/EmptyState.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
 import { formatMoney, formatQuantity } from '@/lib/format'
 
 defineProps({

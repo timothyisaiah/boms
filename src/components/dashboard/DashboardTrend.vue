@@ -14,7 +14,7 @@
         color="primary"
         class="trend__toggle"
         :icon-right="open ? 'expand_less' : 'expand_more'"
-        :label="open ? 'Hide trends' : 'Explore monthly trends'"
+        :label="open ? 'Hide trends' : 'Show trends'"
         :aria-expanded="open ? 'true' : 'false'"
         :aria-controls="bodyId"
         @click="open = !open"

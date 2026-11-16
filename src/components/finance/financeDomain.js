@@ -341,13 +341,3 @@ export function validateExpense(form) {
     ]
   return []
 }
-
-export function getRetailerBalanceState(balance) {
-  if (asNumber(balance.outstanding_amount) > 0)
-    return { label: 'Outstanding', tone: 'warning' }
-  if (asNumber(balance.outstanding_amount) < 0)
-    return { label: 'Retailer credit', tone: 'info' }
-  if (asNumber(balance.remaining_quantity) > 0)
-    return { label: 'Stock on hand', tone: 'success' }
-  return { label: 'Settled', tone: 'neutral' }
-}

@@ -369,7 +369,7 @@ test('snapshot balances include active retailers holding zero units', async ({
   await expect(
     page.getByRole('heading', {
       level: 2,
-      name: 'Recent retailer ledger entries'
+      name: 'Recent movements'
     })
   ).toBeVisible()
   await expectSingleH1(page)
