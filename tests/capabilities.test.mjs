@@ -56,7 +56,11 @@ const WRITE_HOME = {
   remittances: 'finance',
   expenses: 'finance',
   prices: 'settings',
-  recipes: 'settings'
+  recipes: 'settings',
+  'production-run': 'home',
+  'direct-sales': 'home',
+  'retailer-checkins': 'home',
+  'variant-barcode': 'home'
 }
 
 test('client role list matches server ALL_ROLES and the role picker', () => {
@@ -183,12 +187,13 @@ test('every role that may write an action can reach the page that hosts it', () 
       )
 })
 
-test('existing route visibility is preserved; catalogue settings is new', () => {
+test('route visibility: home for every working role, existing routes preserved', () => {
   const visible = Object.fromEntries(
     server.ALL_ROLES.map(role => [role, routesForRole(role).map(d => d.name)])
   )
   assert.deepEqual(visible, {
     admin_owner: [
+      'home',
       'dashboard',
       'operations',
       'retail',
@@ -197,16 +202,17 @@ test('existing route visibility is preserved; catalogue settings is new', () => 
       'admin'
     ],
     operations_manager: [
+      'home',
       'dashboard',
       'operations',
       'retail',
       'finance',
       'settings'
     ],
-    production_staff: ['dashboard', 'operations'],
-    warehouse_staff: ['dashboard', 'operations', 'retail'],
-    sales_or_distribution_staff: ['dashboard', 'retail'],
-    finance_accountant: ['dashboard', 'retail', 'finance'],
+    production_staff: ['home', 'dashboard', 'operations'],
+    warehouse_staff: ['home', 'dashboard', 'operations', 'retail'],
+    sales_or_distribution_staff: ['home', 'dashboard', 'retail'],
+    finance_accountant: ['home', 'dashboard', 'retail', 'finance'],
     read_only_management: ['dashboard', 'finance']
   })
   // A signed-in user still awaiting a role keeps the dashboard only.
@@ -239,7 +245,7 @@ test('bottom navigation: at most four items, More when needed, hidden for one', 
   }
   assert.deepEqual(
     primaryDestinations('admin_owner').map(d => d.name),
-    ['dashboard', 'operations', 'retail', 'finance']
+    ['home', 'dashboard', 'operations', 'more']
   )
   const five = [1, 2, 3, 4, 5].map(n => ({ name: `d${n}` }))
   assert.deepEqual(

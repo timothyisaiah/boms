@@ -1,0 +1,119 @@
+/* Shared styles for the one-tap home flows. Colours come from --boms-* tokens. */
+.flow-lead {
+  margin: 0;
+  font-size: var(--boms-font-size-body);
+  font-weight: 700;
+  color: var(--boms-color-heading);
+}
+.flow-muted {
+  margin: 0;
+  font-size: var(--boms-font-size-label);
+  color: var(--boms-color-text-muted);
+}
+.flow-uses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--boms-space-2);
+  padding: var(--boms-space-3);
+  border-radius: var(--boms-radius-md);
+  background: var(--boms-color-surface-subtle);
+  border: 1px solid var(--boms-color-border);
+}
+.flow-uses__title {
+  margin: 0;
+  font-size: var(--boms-font-size-label);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--boms-color-text-muted);
+}
+.flow-uses__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--boms-space-2);
+}
+.flow-uses__line {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: var(--boms-space-2);
+}
+.flow-uses__line--short {
+  color: var(--boms-color-danger-text);
+}
+.flow-uses__name {
+  font-weight: 700;
+}
+.flow-uses__have {
+  grid-column: 2 / -1;
+  font-size: var(--boms-font-size-caption);
+}
+.flow-uses__icon--ok {
+  color: var(--boms-color-success);
+}
+.flow-uses__icon--short {
+  color: var(--boms-color-danger);
+}
+.flow-uses__warn {
+  margin: 0;
+  color: var(--boms-color-danger-text);
+  font-weight: 700;
+}
+.flow-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--boms-font-size-body);
+  font-weight: 700;
+}
+.flow-total__value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--boms-color-heading);
+}
+.flow-choice {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--boms-space-2);
+}
+.flow-choice__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--boms-space-1);
+  min-height: 64px;
+  padding: var(--boms-space-3);
+  text-align: left;
+  font: inherit;
+  color: var(--boms-color-text);
+  background: var(--boms-color-surface);
+  border: 1px solid var(--boms-color-border);
+  border-radius: var(--boms-radius-md);
+  cursor: pointer;
+}
+.flow-choice__item:focus-visible {
+  outline: 2px solid var(--boms-color-focus);
+  outline-offset: 2px;
+}
+.flow-choice__item--selected {
+  border: 2px solid var(--boms-color-primary);
+  background: var(--boms-color-selected-bg);
+}
+.flow-choice__name {
+  font-weight: 800;
+  color: var(--boms-color-heading);
+}
+.flow-choice__hint {
+  font-size: var(--boms-font-size-caption);
+  color: var(--boms-color-text-muted);
+}
+.flow-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--boms-space-2);
+}

@@ -48,6 +48,15 @@ export const WRITE_ROLES: Record<string, readonly string[]> = {
   ],
   purchases: ['admin_owner', 'operations_manager', 'warehouse_staff'],
   production: ['admin_owner', 'operations_manager', 'production_staff'],
+  'production-run': ['admin_owner', 'operations_manager', 'production_staff'],
+  'direct-sales': [
+    'admin_owner',
+    'operations_manager',
+    'warehouse_staff',
+    'sales_or_distribution_staff'
+  ],
+  'retailer-checkins': FINANCE_WRITE,
+  'variant-barcode': ['admin_owner', 'operations_manager'],
   'stock-issues': [
     'admin_owner',
     'operations_manager',

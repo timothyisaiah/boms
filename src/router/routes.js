@@ -1,6 +1,7 @@
 import { DESTINATIONS } from '../constants/capabilities.js'
 
 const pages = {
+  home: () => import('@/pages/HomePage.vue'),
   dashboard: () => import('@/pages/IndexPage.vue'),
   operations: () => import('@/pages/OperationsPage.vue'),
   retail: () => import('@/pages/RetailPage.vue'),

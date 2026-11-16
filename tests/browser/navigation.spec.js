@@ -239,19 +239,19 @@ test('bottom navigation switches destination in one tap and back stays coherent'
 }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await signInAs(page, 'operations_manager')
-  await page.goto('/#/')
+  await page.goto('/#/home')
   const nav = page.getByRole('navigation', { name: 'Primary' })
-  await nav.getByRole('tab', { name: 'Finance' }).click()
-  await expect(page).toHaveURL(/#\/finance$/)
-  await expect(nav.locator('[data-destination="finance"]')).toHaveAttribute(
+  await nav.getByRole('tab', { name: 'Dashboard' }).click()
+  await expect(page).toHaveURL(/#\/$/)
+  await expect(nav.locator('[data-destination="dashboard"]')).toHaveAttribute(
     'aria-current',
     'page'
   )
   await nav.getByRole('tab', { name: 'Operations' }).click()
   await expect(page).toHaveURL(/#\/operations$/)
   await page.goBack()
-  await expect(page).toHaveURL(/#\/finance$/)
-  await expect(nav.locator('[data-destination="finance"]')).toHaveAttribute(
+  await expect(page).toHaveURL(/#\/$/)
+  await expect(nav.locator('[data-destination="dashboard"]')).toHaveAttribute(
     'aria-current',
     'page'
   )

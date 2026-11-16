@@ -21,7 +21,7 @@
     "build": "quasar build",
     "dev:api": "node --env-file=.env.development --import tsx scripts/api-dev.ts",
     "typecheck": "tsc -p tsconfig.server.json",
-    "test": "node --test tests/migrations.test.mjs tests/domain.test.mjs tests/users.test.mjs tests/partners.test.mjs tests/materials.test.mjs tests/variants.test.mjs tests/drafts.test.mjs tests/foundations.test.mjs tests/status.test.mjs tests/visual-tokens.test.mjs && node --import tsx --test tests/capabilities.test.mjs",
+    "test": "node --test tests/migrations.test.mjs tests/domain.test.mjs tests/users.test.mjs tests/partners.test.mjs tests/materials.test.mjs tests/variants.test.mjs tests/drafts.test.mjs tests/foundations.test.mjs tests/status.test.mjs tests/visual-tokens.test.mjs tests/simple-ops.test.mjs && node --import tsx --test tests/capabilities.test.mjs",
     "test:history": "node --import tsx --test tests/history.test.ts",
     "test:neon": "node --import tsx --test tests/neon.test.ts",
     "test:users:neon": "node --import tsx --test tests/users-neon.test.ts",

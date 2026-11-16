@@ -12,26 +12,26 @@ export const productSeeds = [
 export const variantSeeds = [
   {
     product_slug: 'beecone-raw-natural-honey',
-    sku: 'BEE-RAW-250',
-    variant_name: '250g Classic Jar',
+    sku: 'BEE-RAW-60',
+    variant_name: 'Raw Honey 60g',
     flavor: 'Classic',
-    pack_size_grams: 250,
+    pack_size_grams: 60,
     packaging_type: 'Jar',
     is_active: true
   },
   {
     product_slug: 'beecone-raw-natural-honey',
-    sku: 'BEE-RAW-500',
-    variant_name: '500g Classic Jar',
+    sku: 'BEE-RAW-400',
+    variant_name: 'Raw Honey 400g',
     flavor: 'Classic',
-    pack_size_grams: 500,
+    pack_size_grams: 400,
     packaging_type: 'Jar',
     is_active: true
   },
   {
     product_slug: 'beecone-raw-natural-honey',
     sku: 'BEE-RAW-1000',
-    variant_name: '1kg Classic Jar',
+    variant_name: 'Raw Honey 1kg',
     flavor: 'Classic',
     pack_size_grams: 1000,
     packaging_type: 'Jar',
@@ -39,10 +39,28 @@ export const variantSeeds = [
   },
   {
     product_slug: 'beecone-raw-natural-honey',
-    sku: 'BEE-GIN-500',
-    variant_name: '500g Ginger Infused Jar',
+    sku: 'BEE-GIN-60',
+    variant_name: 'Ginger Infused Honey 60g',
     flavor: 'Ginger Infused',
-    pack_size_grams: 500,
+    pack_size_grams: 60,
+    packaging_type: 'Jar',
+    is_active: true
+  },
+  {
+    product_slug: 'beecone-raw-natural-honey',
+    sku: 'BEE-GIN-400',
+    variant_name: 'Ginger Infused Honey 400g',
+    flavor: 'Ginger Infused',
+    pack_size_grams: 400,
+    packaging_type: 'Jar',
+    is_active: true
+  },
+  {
+    product_slug: 'beecone-raw-natural-honey',
+    sku: 'BEE-GIN-1000',
+    variant_name: 'Ginger Infused Honey 1kg',
+    flavor: 'Ginger Infused',
+    pack_size_grams: 1000,
     packaging_type: 'Jar',
     is_active: true
   }
@@ -54,64 +72,134 @@ export const materialSeeds = [
     name: 'Raw Honey',
     kind: 'raw_honey',
     unit_of_measure: 'kg',
-    description: 'Primary honey input measured by kilogram.',
+    description: 'Bulk raw honey, bought in 20 kg jerricans.',
     is_active: true
   },
   {
-    code: 'JAR-250',
-    name: '250g PET Jar',
-    kind: 'packaging',
-    unit_of_measure: 'piece',
-    description: 'Primary 250g jar used for finished stock.',
+    code: 'GINGER-POWDER-KG',
+    name: 'Ginger Powder',
+    kind: 'spice',
+    unit_of_measure: 'kg',
+    description: '1 kg infuses one 20 kg jerrican of honey.',
     is_active: true
   },
   {
-    code: 'JAR-500',
-    name: '500g PET Jar',
+    code: 'JAR-60',
+    name: '60g Jar',
     kind: 'packaging',
     unit_of_measure: 'piece',
-    description: 'Primary 500g jar used for finished stock.',
+    description: 'Empty 60g jar with lid.',
+    is_active: true
+  },
+  {
+    code: 'JAR-400',
+    name: '400g Jar',
+    kind: 'packaging',
+    unit_of_measure: 'piece',
+    description: 'Empty 400g jar with lid.',
     is_active: true
   },
   {
     code: 'JAR-1000',
-    name: '1kg PET Jar',
+    name: '1kg Jar',
     kind: 'packaging',
     unit_of_measure: 'piece',
-    description: 'Primary 1kg jar used for finished stock.',
+    description: 'Empty 1kg jar with lid.',
     is_active: true
   },
   {
-    code: 'LID-63MM',
-    name: '63mm Gold Twist Lid',
+    code: 'LABEL-60',
+    name: '60g Label',
     kind: 'packaging',
     unit_of_measure: 'piece',
-    description: 'Shared lid used across Beecone jar formats.',
+    description: 'Printed label for 60g jars.',
     is_active: true
   },
   {
-    code: 'LABEL-FRONT',
-    name: 'Beecone Front Label',
+    code: 'LABEL-400',
+    name: '400g Label',
     kind: 'packaging',
     unit_of_measure: 'piece',
-    description: 'Printed front label applied to finished jars.',
+    description: 'Printed label for 400g jars.',
     is_active: true
   },
   {
-    code: 'SEAL-TAMPER',
-    name: 'Tamper Seal',
+    code: 'LABEL-1000',
+    name: '1kg Label',
     kind: 'packaging',
     unit_of_measure: 'piece',
-    description: 'Tamper-evident seal for traceable retail stock.',
+    description: 'Printed label for 1kg jars.',
     is_active: true
+  }
+]
+
+// Default recipes per jar (editable in Catalogue settings). Ginger honey is
+// mixed 20 kg honey : 1 kg ginger, so a jar is 20/21 honey and 1/21 ginger.
+const per = (grams, share = 1) =>
+  (Math.round((grams / 1000) * share * 1e6) / 1e6).toFixed(6)
+export const recipeSeeds = [
+  {
+    sku: 'BEE-RAW-60',
+    name: 'Raw Honey 60g',
+    items: [
+      { material_code: 'RAW-HONEY-KG', quantity_per_unit: per(60) },
+      { material_code: 'JAR-60', quantity_per_unit: '1' },
+      { material_code: 'LABEL-60', quantity_per_unit: '1' }
+    ]
   },
   {
-    code: 'CARTON-12',
-    name: '12-Jar Master Carton',
-    kind: 'packaging',
-    unit_of_measure: 'piece',
-    description: 'Outer carton for warehouse handling and retail dispatch.',
-    is_active: true
+    sku: 'BEE-RAW-400',
+    name: 'Raw Honey 400g',
+    items: [
+      { material_code: 'RAW-HONEY-KG', quantity_per_unit: per(400) },
+      { material_code: 'JAR-400', quantity_per_unit: '1' },
+      { material_code: 'LABEL-400', quantity_per_unit: '1' }
+    ]
+  },
+  {
+    sku: 'BEE-RAW-1000',
+    name: 'Raw Honey 1kg',
+    items: [
+      { material_code: 'RAW-HONEY-KG', quantity_per_unit: per(1000) },
+      { material_code: 'JAR-1000', quantity_per_unit: '1' },
+      { material_code: 'LABEL-1000', quantity_per_unit: '1' }
+    ]
+  },
+  {
+    sku: 'BEE-GIN-60',
+    name: 'Ginger Infused Honey 60g',
+    items: [
+      { material_code: 'RAW-HONEY-KG', quantity_per_unit: per(60, 20 / 21) },
+      { material_code: 'GINGER-POWDER-KG', quantity_per_unit: per(60, 1 / 21) },
+      { material_code: 'JAR-60', quantity_per_unit: '1' },
+      { material_code: 'LABEL-60', quantity_per_unit: '1' }
+    ]
+  },
+  {
+    sku: 'BEE-GIN-400',
+    name: 'Ginger Infused Honey 400g',
+    items: [
+      { material_code: 'RAW-HONEY-KG', quantity_per_unit: per(400, 20 / 21) },
+      {
+        material_code: 'GINGER-POWDER-KG',
+        quantity_per_unit: per(400, 1 / 21)
+      },
+      { material_code: 'JAR-400', quantity_per_unit: '1' },
+      { material_code: 'LABEL-400', quantity_per_unit: '1' }
+    ]
+  },
+  {
+    sku: 'BEE-GIN-1000',
+    name: 'Ginger Infused Honey 1kg',
+    items: [
+      { material_code: 'RAW-HONEY-KG', quantity_per_unit: per(1000, 20 / 21) },
+      {
+        material_code: 'GINGER-POWDER-KG',
+        quantity_per_unit: per(1000, 1 / 21)
+      },
+      { material_code: 'JAR-1000', quantity_per_unit: '1' },
+      { material_code: 'LABEL-1000', quantity_per_unit: '1' }
+    ]
   }
 ]
 

@@ -154,6 +154,55 @@ const schemas: Record<string, z.ZodType> = {
       .min(1)
       .max(100)
   }),
+  'production-run': z.strictObject({
+    producedAt: stamp,
+    notes: text,
+    items: z
+      .array(z.strictObject({ variant_id: id, quantity: quantity }))
+      .min(1)
+      .max(50)
+      .refine(
+        items => items.some(item => item.quantity > 0),
+        'Choose how many jars to make.'
+      )
+  }),
+  'direct-sales': z.strictObject({
+    soldAt: stamp,
+    customerName: text,
+    paymentMethod: z.enum(['cash', 'mobile_money', 'bank', 'other']),
+    saleReference: text,
+    notes: text,
+    items: z
+      .array(z.strictObject({ variant_id: id, quantity: quantity.positive() }))
+      .min(1)
+      .max(50)
+  }),
+  'retailer-checkins': z.strictObject({
+    retailerId: id,
+    checkedAt: stamp,
+    notes: text,
+    counts: z
+      .array(
+        z.strictObject({
+          variant_id: id,
+          remaining: quantity,
+          damaged: quantity.default(0)
+        })
+      )
+      .max(100),
+    amount: decimal(2, false).nullish(),
+    paymentReference: text
+  }),
+  'variant-barcode': z.strictObject({
+    variantId: id,
+    barcode: z.union([
+      z
+        .string()
+        .trim()
+        .regex(/^[0-9A-Za-z-]{4,64}$/, 'Enter a valid barcode.'),
+      z.literal('')
+    ])
+  }),
   reconciliations: reconcile,
   returns: reconcile,
   remittances: z.strictObject({

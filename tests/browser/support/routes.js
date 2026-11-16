@@ -23,6 +23,13 @@ export const ROUTES = {
     workspace: null,
     roles: null
   },
+  home: {
+    name: 'home',
+    path: '/home',
+    heading: 'Home',
+    workspace: 'home',
+    roles: allowedRolesFor('home')
+  },
   dashboard: {
     name: 'dashboard',
     path: '/',
@@ -85,6 +92,7 @@ export const ALL_ROUTES = Object.values(ROUTES)
 
 /** Routes rendered inside MainLayout that require a signed-in user. */
 export const APP_ROUTES = [
+  ROUTES.home,
   ROUTES.dashboard,
   ROUTES.operations,
   ROUTES.retail,

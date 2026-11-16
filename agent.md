@@ -70,6 +70,14 @@ Core promise:
   Standard" under UX Expectations. Existing desktop-oriented screens should
   be revisited opportunistically, not necessarily all at once.
 
+- **November 2026 — Simple operations (one-tap home).** Daily work moved to a
+  `/home` screen with five big actions: Make jars, Stock in, Give to retailer,
+  Sell, Check in retailer. Each is one server action that composes the
+  existing audited functions (FIFO lots, batch costing, reconciliation,
+  remittance), so ledgers and reports are unchanged in meaning. The detailed
+  module screens remain for corrections and history. See "Simple Operations"
+  under Domain Rules and migration `202611160014_simple_operations.sql`.
+
 ## Primary Goal
 
 Build a system that mirrors Beecone's real operating flow:
@@ -165,6 +173,28 @@ Each role should only see and do what is necessary.
   warehouse-scoped tables now, pointed at one seeded warehouse row, so
   multi-warehouse can be added later without a schema rewrite — but do not
   build any multi-warehouse UI or logic until it's actually needed.
+
+### Simple Operations (confirmed November 2026)
+
+- Catalogue: two products (Raw Honey, Ginger Infused Honey) in 60g, 400g and
+  1kg jars. Raw honey is bought in 20 kg jerricans (`materials.purchase_unit_*`
+  converts jerricans to kg at entry). Ginger honey mixes 20 kg honey with
+  1 kg ginger powder, so a jar is 20/21 honey and 1/21 ginger by weight.
+- Barcodes are one shared code per variant (`product_variants.barcode`), not
+  per jar. Scanning a jar adds one unit of that variant; the batch is chosen
+  FIFO. Context decides the movement: Give = consignment issue, Sell = direct
+  sale, Check in = count of jars still on the retailer's shelf.
+- Selling price is preset per variant (`pricing`); production cost is still
+  derived from consumed lots.
+- "Make jars" (`record_production_run`) creates one costed batch per variant
+  from its recipe and refuses the whole run with a per-material shortage
+  message if any input is short. Recipes stay editable defaults.
+- Retailers remain consignment. A check-in (`record_retailer_checkin`) treats
+  held − on shelf − damaged as sold (oldest issue lines first) and can record
+  the money collected as a remittance in the same transaction.
+- Direct sales to customers (`direct_sales`) are a second sales channel:
+  revenue is recognised immediately at the preset price and is included in
+  `finance_profit_summary`, `business_report`, stock valuation and digests.
 
 ## Recommended Data Foundations
 

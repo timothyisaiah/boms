@@ -58,7 +58,8 @@ export const WORKSPACE_READ_ROLES = Object.freeze({
   operations: SUPPLY,
   retail: RETAIL,
   finance: REVIEW,
-  settings: SETTINGS
+  settings: SETTINGS,
+  home: allExcept('read_only_management')
 })
 
 // Other read endpoints: api/materials.ts, api/variants.ts, api/partners.ts
@@ -86,6 +87,19 @@ export const WRITE_ROLES = Object.freeze({
   ),
   purchases: only('admin_owner', 'operations_manager', 'warehouse_staff'),
   production: only('admin_owner', 'operations_manager', 'production_staff'),
+  'production-run': only(
+    'admin_owner',
+    'operations_manager',
+    'production_staff'
+  ),
+  'direct-sales': only(
+    'admin_owner',
+    'operations_manager',
+    'warehouse_staff',
+    'sales_or_distribution_staff'
+  ),
+  'retailer-checkins': FINANCE_WRITE,
+  'variant-barcode': SETTINGS,
   'stock-issues': only(
     'admin_owner',
     'operations_manager',
@@ -114,6 +128,18 @@ export const OTHER_CAPABILITIES = Object.freeze({
 // `group: 'primary'` destinations are bottom-navigation candidates; 'settings'
 // destinations live in the drawer only.
 export const DESTINATIONS = Object.freeze([
+  {
+    // One-tap daily work: make jars, stock in, give, sell, check in.
+    name: 'home',
+    path: '/home',
+    label: 'Home',
+    caption: 'Make, give, sell and check in',
+    icon: 'home',
+    title: 'Home',
+    group: 'primary',
+    workspace: 'home',
+    roles: allExcept('read_only_management')
+  },
   {
     name: 'dashboard',
     path: '/',
@@ -202,11 +228,11 @@ export const DESTINATIONS = Object.freeze([
 
 // Where each role lands after sign-in. Must be one of its routes.
 export const LANDING_ROUTES = Object.freeze({
-  admin_owner: '/',
-  operations_manager: '/',
-  production_staff: '/operations',
-  warehouse_staff: '/operations',
-  sales_or_distribution_staff: '/retail',
+  admin_owner: '/home',
+  operations_manager: '/home',
+  production_staff: '/home',
+  warehouse_staff: '/home',
+  sales_or_distribution_staff: '/home',
   finance_accountant: '/finance',
   read_only_management: '/finance'
 })

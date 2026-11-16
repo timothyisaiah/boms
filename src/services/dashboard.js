@@ -207,7 +207,8 @@ function buildActivityFeed({
   stockIssues,
   reconciliations,
   remittances,
-  expenses
+  expenses,
+  directSales = []
 }) {
   return [
     ...purchases.map(purchase => ({
@@ -261,6 +262,15 @@ function buildActivityFeed({
       value: asNumber(remittance.amount),
       valueType: 'currency'
     })),
+    ...directSales.map(sale => ({
+      id: `sale-${sale.id}`,
+      type: 'Sale',
+      title: sale.sale_reference?.trim() || `Sale ${sale.id}`,
+      subtitle: sale.customer_name?.trim() || 'Walk-in customer',
+      timestamp: sale.sold_at,
+      value: asNumber(sale.total_amount),
+      valueType: 'currency'
+    })),
     ...expenses.map(expense => ({
       id: `expense-${expense.id}`,
       type: 'Expense',
@@ -288,7 +298,8 @@ function buildLiveWorkspace({
   remittances,
   retailerBalances,
   openIssueLines,
-  expenses
+  expenses,
+  directSales = []
 }) {
   const monthSummaries = months.map(createMonthSummary)
   const monthMap = Object.fromEntries(
@@ -353,6 +364,19 @@ function buildLiveWorkspace({
     month.remainingQuantity += asNumber(reconciliation.total_remaining_quantity)
     month.salesValue += asNumber(reconciliation.total_sales_value)
     month.cogsValue += asNumber(reconciliation.total_cogs_value)
+  })
+
+  // Direct (walk-in) sales are recognised immediately at the preset price.
+  directSales.forEach(sale => {
+    const month = monthMap[toMonthKey(sale.sold_at)]
+
+    if (!month) {
+      return
+    }
+
+    month.soldQuantity += asNumber(sale.total_quantity)
+    month.salesValue += asNumber(sale.total_amount)
+    month.cogsValue += asNumber(sale.total_cost)
   })
 
   remittances.forEach(remittance => {
@@ -471,7 +495,8 @@ function buildLiveWorkspace({
       stockIssues,
       reconciliations,
       remittances,
-      expenses
+      expenses,
+      directSales
     })
   }
 }
