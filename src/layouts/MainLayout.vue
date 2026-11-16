@@ -18,11 +18,7 @@
         />
 
         <div class="brand-lockup">
-          <img
-            src="/src/assets/logo.png"
-            class="brand-badge"
-            alt="Beecone Honey"
-          />
+          <img :src="logoUrl" class="brand-badge" alt="Beecone Honey" />
           <div>
             <div class="brand-kicker">Beecone Honey</div>
             <div class="brand-title">Operations Management System</div>
@@ -193,6 +189,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getRoleLabel } from '@/constants/roles'
 import { primaryDestinations, routesForRole } from '@/constants/capabilities'
 import { authState, signOut } from '@/services/auth'
+import logoUrl from '@/assets/logo.png'
 
 // Below Quasar's md breakpoint (1024px) the drawer is an overlay and the
 // bottom navigation carries the primary destinations; at 1024px and above the
