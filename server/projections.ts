@@ -72,7 +72,12 @@ export const projections = {
   retailerBalances: `select to_jsonb(t) data from retailer_outstanding_balances t order by outstanding_amount desc,retailer_name`,
   profitSummary: `select to_jsonb(t) data from finance_profit_summary t`,
   recipes: `select to_jsonb(t)||jsonb_build_object('items',coalesce((select jsonb_agg(to_jsonb(i)||jsonb_build_object('material',to_jsonb(m)) order by i.id) from production_recipe_items i join materials m on m.id=i.material_id where i.recipe_id=t.id),'[]')) data from production_recipes t order by t.id`,
-  pricing: `select to_jsonb(t) data from pricing t order by effective_from desc,id desc`
+  pricing: `select to_jsonb(t) data from pricing t order by effective_from desc,id desc`,
+  // Simple operations (home): bounded per-material and per-variant totals.
+  materialStock: `select to_jsonb(t)||jsonb_build_object('on_hand',coalesce((select sum(l.quantity_remaining) from inventory_lots l where l.material_id=t.id and l.status='open'),0)) data from materials t where t.is_active order by t.kind,t.name`,
+  finishedByVariant: `select jsonb_build_object('variant_id',o.variant_id,'quantity',sum(o.quantity_remaining)::int) data from production_outputs o join production_batches b on b.id=o.production_batch_id where b.status='completed' and o.quantity_remaining>0 and (b.expires_at is null or b.expires_at>=current_date) group by o.variant_id`,
+  directSales: `select to_jsonb(t) data from direct_sales t order by sold_at desc,id desc`,
+  retailerHoldings: `select jsonb_build_object('retailer_id',t.retailer_id,'variant_id',t.variant_id,'quantity',sum(t.quantity_open)::int,'unit_price',max(c.unit_price)) data from retailer_issue_open_balances t left join current_variant_prices c on c.variant_id=t.variant_id group by t.retailer_id,t.variant_id`
 } satisfies Record<string, string>
 export type Projection = keyof typeof projections
 
@@ -94,7 +99,11 @@ export const access: Record<Projection, readonly string[]> = {
   retailerBalances: REVIEW,
   profitSummary: FINANCE,
   recipes: SUPPLY,
-  pricing: ALL_ROLES
+  pricing: ALL_ROLES,
+  materialStock: SUPPLY,
+  finishedByVariant: ALL_ROLES,
+  retailerHoldings: RETAIL,
+  directSales: REVIEW
 }
 
 // The legacy sales role could read batches, but not material inputs/lots.

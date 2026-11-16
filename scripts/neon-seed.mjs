@@ -4,6 +4,7 @@ import {
   productSeeds,
   variantSeeds,
   materialSeeds,
+  recipeSeeds,
   supplierSeeds,
   retailerSeeds
 } from '../neon/reference-data.mjs'
@@ -26,6 +27,11 @@ await query.transaction([
     s =>
       query`insert into suppliers(supplier_name,supplier_kind,contact_name,phone,email,notes,is_active) values(${s.supplier_name},${s.supplier_kind},${s.contact_name},${s.phone},${s.email},${s.notes},${s.is_active}) on conflict do nothing`
   ),
+  // Recipes are only created when a variant has none; edited recipes are kept.
+  ...recipeSeeds.flatMap(r => [
+    query`insert into production_recipes(variant_id,name) select id,${r.name} from product_variants where sku=${r.sku} on conflict(variant_id) do nothing`,
+    query`insert into production_recipe_items(recipe_id,material_id,quantity_per_unit) select recipe.id,m.id,item.quantity_per_unit::numeric from production_recipes recipe join product_variants v on v.id=recipe.variant_id cross join jsonb_to_recordset(${JSON.stringify(r.items)}::jsonb) as item(material_code text,quantity_per_unit text) join materials m on m.code=item.material_code where v.sku=${r.sku} and not exists(select 1 from production_recipe_items existing where existing.recipe_id=recipe.id)`
+  ]),
   ...retailerSeeds.map(
     r =>
       query`insert into retailers(retailer_name,contact_name,phone,email,delivery_location,notes,is_active) values(${r.retailer_name},${r.contact_name},${r.phone},${r.email},${r.delivery_location},${r.notes},${r.is_active}) on conflict do nothing`

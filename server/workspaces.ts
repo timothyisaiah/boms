@@ -17,7 +17,9 @@ export const workspaceRoles = {
   retail: RETAIL,
   finance: REVIEW,
   dashboard: ALL_ROLES,
-  settings: ['admin_owner', 'operations_manager']
+  settings: ['admin_owner', 'operations_manager'],
+  // Every role that can do daily work; read-only management has no actions.
+  home: ALL_ROLES.filter(role => role !== 'read_only_management')
 }
 type Workspace = keyof typeof workspaceRoles
 const groups: Record<Workspace, Projection[]> = {
@@ -57,9 +59,21 @@ const groups: Record<Workspace, Projection[]> = {
     'remittances',
     'retailerBalances',
     'openIssueLines',
-    'expenses'
+    'expenses',
+    'directSales'
   ],
-  settings: ['variants', 'materials', 'recipes', 'pricing']
+  settings: ['variants', 'materials', 'recipes', 'pricing'],
+  // Everything the one-tap home screen needs, as bounded totals.
+  home: [
+    'variants',
+    'materialStock',
+    'finishedByVariant',
+    'recipes',
+    'suppliers',
+    'retailers',
+    'retailerHoldings',
+    'retailerBalances'
+  ]
 }
 
 // Summary-only, open-state replacements for client computations that would
@@ -82,7 +96,8 @@ const summaryExtraGroups: Record<Workspace, (keyof typeof summaryExtras)[]> = {
   retail: ['retailerStockPositions'],
   finance: ['reconciliationOptions'],
   dashboard: [],
-  settings: []
+  settings: [],
+  home: []
 }
 const isHistory = (key: string): key is HistoryResource =>
   Object.hasOwn(historySources, key)

@@ -230,6 +230,153 @@ function buildFixtures() {
       recipes: [],
       pricing: []
     },
+    // One-tap home: 2 products x sizes, supplies, one retailer holding jars.
+    home: {
+      mode: 'live',
+      variants: [
+        {
+          id: 11,
+          sku: 'BEE-RAW-60',
+          variant_name: 'Raw Honey 60g',
+          flavor: 'Classic',
+          pack_size_grams: 60,
+          current_price: '5000',
+          barcode: '6151100000601',
+          low_stock_threshold: 20
+        },
+        {
+          id: 12,
+          sku: 'BEE-RAW-400',
+          variant_name: 'Raw Honey 400g',
+          flavor: 'Classic',
+          pack_size_grams: 400,
+          current_price: '25000',
+          barcode: null,
+          low_stock_threshold: 10
+        },
+        {
+          id: 13,
+          sku: 'BEE-GIN-400',
+          variant_name: 'Ginger Infused Honey 400g',
+          flavor: 'Ginger Infused',
+          pack_size_grams: 400,
+          current_price: '30000',
+          barcode: null,
+          low_stock_threshold: 0
+        }
+      ],
+      materialStock: [
+        {
+          id: 21,
+          code: 'RAW-HONEY-KG',
+          name: 'Raw Honey',
+          kind: 'raw_honey',
+          unit_of_measure: 'kg',
+          purchase_unit_label: 'jerrican',
+          purchase_unit_size: '20.000',
+          on_hand: '30.000',
+          low_stock_threshold: '20'
+        },
+        {
+          id: 22,
+          code: 'GINGER-POWDER-KG',
+          name: 'Ginger Powder',
+          kind: 'spice',
+          unit_of_measure: 'kg',
+          purchase_unit_label: null,
+          purchase_unit_size: '1.000',
+          on_hand: '0.500',
+          low_stock_threshold: '0'
+        },
+        {
+          id: 23,
+          code: 'JAR-60',
+          name: '60g Jar',
+          kind: 'packaging',
+          unit_of_measure: 'piece',
+          purchase_unit_label: null,
+          purchase_unit_size: '1.000',
+          on_hand: '200.000',
+          low_stock_threshold: '0'
+        },
+        {
+          id: 24,
+          code: 'JAR-400',
+          name: '400g Jar',
+          kind: 'packaging',
+          unit_of_measure: 'piece',
+          purchase_unit_label: null,
+          purchase_unit_size: '1.000',
+          on_hand: '10.000',
+          low_stock_threshold: '0'
+        },
+        {
+          id: 25,
+          code: 'LABEL-60',
+          name: '60g Label',
+          kind: 'packaging',
+          unit_of_measure: 'piece',
+          purchase_unit_label: null,
+          purchase_unit_size: '1.000',
+          on_hand: '200.000',
+          low_stock_threshold: '0'
+        },
+        {
+          id: 26,
+          code: 'LABEL-400',
+          name: '400g Label',
+          kind: 'packaging',
+          unit_of_measure: 'piece',
+          purchase_unit_label: null,
+          purchase_unit_size: '1.000',
+          on_hand: '50.000',
+          low_stock_threshold: '0'
+        }
+      ],
+      finishedByVariant: [
+        { variant_id: 11, quantity: 120 },
+        { variant_id: 12, quantity: 8 }
+      ],
+      recipes: [
+        {
+          id: 31,
+          variant_id: 11,
+          name: 'Raw 60g',
+          items: [
+            { material_id: 21, quantity_per_unit: '0.060000' },
+            { material_id: 23, quantity_per_unit: '1.000000' },
+            { material_id: 25, quantity_per_unit: '1.000000' }
+          ]
+        },
+        {
+          id: 32,
+          variant_id: 12,
+          name: 'Raw 400g',
+          items: [
+            { material_id: 21, quantity_per_unit: '0.400000' },
+            { material_id: 24, quantity_per_unit: '1.000000' },
+            { material_id: 26, quantity_per_unit: '1.000000' }
+          ]
+        },
+        {
+          id: 33,
+          variant_id: 13,
+          name: 'Ginger 400g',
+          items: [
+            { material_id: 21, quantity_per_unit: '0.380952' },
+            { material_id: 22, quantity_per_unit: '0.019048' },
+            { material_id: 24, quantity_per_unit: '1.000000' },
+            { material_id: 26, quantity_per_unit: '1.000000' }
+          ]
+        }
+      ],
+      suppliers: [supplier],
+      retailers: [retailer],
+      retailerHoldings: [
+        { retailer_id: 1, variant_id: 11, quantity: 30, unit_price: '5000' }
+      ],
+      retailerBalances: [{ retailer_id: 1, outstanding_amount: '20000' }]
+    },
     dashboard: {
       mode: 'live',
       purchases,
