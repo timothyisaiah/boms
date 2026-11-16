@@ -52,8 +52,15 @@
         :material-options="materialOptions"
         :disabled="purchaseWritesDisabled"
         :submitting="isSubmittingPurchase"
+        :draft-restored="receiptDraft.restored.value"
+        :confirmation="receiptConfirmation"
+        :can-create-batch="mayRecordProduction"
         @submit="submitPurchase"
-        @saved="purchaseSaved"
+        @saved="purchaseSaved()"
+        @discard-draft="discardReceiptDraft"
+        @another="startAnother('receipt-entry')"
+        @navigate="openTask"
+        @dismiss-confirmation="receiptConfirmation = null"
       />
 
       <BatchForm
@@ -64,9 +71,13 @@
         :submitting="isSubmittingBatch"
         :needs-lots="workspaceIsLive && openInventoryLots.length === 0"
         :draft-restored="batchDraft.restored.value"
+        :confirmation="batchConfirmation"
         @submit="submitBatch"
-        @saved="batchSaved"
+        @saved="batchSaved()"
         @discard-draft="discardBatchDraft"
+        @another="startAnother('batch-entry')"
+        @navigate="openTask"
+        @dismiss-confirmation="batchConfirmation = null"
       />
 
       <HistoryRecords
@@ -102,7 +113,9 @@
       @supplier-added="supplierAdded"
     />
 
-    <DirtyGuardDialog :when="batchDraft.isDirty.value" />
+    <DirtyGuardDialog
+      :when="receiptDraft.isDirty.value || batchDraft.isDirty.value"
+    />
   </q-page>
 </template>
 
@@ -129,7 +142,7 @@ import { useFormDraft } from '@/composables/useFormDraft'
 import { useReceiptForm } from '@/composables/operations/useReceiptForm'
 import { useBatchForm } from '@/composables/operations/useBatchForm'
 import { useHistoryTable } from '@/composables/operations/useHistoryTable'
-import { asNumber } from '@/lib/format'
+import { asNumber, formatMoney, formatQuantity } from '@/lib/format'
 import { isWriteLocked } from '@/services/writes'
 import {
   emptyOperationsWorkspace,
@@ -149,6 +162,9 @@ const batchFormView = ref(null)
 const managersRef = ref(null)
 const isSubmittingPurchase = ref(false)
 const isSubmittingBatch = ref(false)
+// `{ title, details }` shown above each form after a successful save.
+const receiptConfirmation = ref(null)
+const batchConfirmation = ref(null)
 
 const workspaceState = useWorkspace(
   ({ signal }) => fetchOperationsSummary({ signal }),
@@ -160,6 +176,10 @@ const workspace = computed(
 const workspaceIsLive = computed(() => workspaceState.mode.value === 'live')
 
 const receiptForm = useReceiptForm()
+// Inputs only: writes.js keeps the idempotency key and retry body separately.
+const receiptDraft = useFormDraft('operations:receipt', receiptForm.state, {
+  deserialize: receiptForm.deserialize
+})
 const batchForm = useBatchForm(workspace, {
   loadDayBatches: fetchBatchesStartedOn,
   findBatchesByCode
@@ -338,7 +358,12 @@ async function refreshAll() {
 
 async function supplierAdded(result) {
   await refreshAll()
-  if (result?.id) receiptForm.state.supplierId = result.id
+  if (!result?.id) return
+  // Preselecting the new supplier on an untouched receipt is not unsaved
+  // input: keep the form clean so it neither drafts nor guards navigation.
+  const wasClean = !receiptDraft.isDirty.value
+  receiptForm.state.supplierId = result.id
+  if (wasClean) receiptDraft.clearDraft()
 }
 
 async function openPrimaryTask() {
@@ -351,10 +376,11 @@ async function openPrimaryTask() {
 
 async function submitPurchase(payload) {
   if (purchaseWritesDisabled.value) return
+  receiptConfirmation.value = null
   isSubmittingPurchase.value = true
   try {
     await recordPurchase(payload)
-    await purchaseSaved()
+    await purchaseSaved(describeReceipt(payload))
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -368,23 +394,53 @@ async function submitPurchase(payload) {
   }
 }
 
-async function purchaseSaved() {
+/** Confirmation text for a receipt, built before the form is reset. */
+function describeReceipt(payload) {
+  const supplier = supplierOptions.value.find(
+    option => option.value === payload.supplierId
+  )
+  const lines = payload.items.length
+  return {
+    title: `Receipt recorded from ${supplier?.label ?? 'the supplier'}`,
+    details: [
+      `${lines} ${lines === 1 ? 'line' : 'lines'}, estimated total ${formatMoney(receiptForm.total.value)}.`,
+      'Material lots and purchase history have been refreshed.'
+    ]
+  }
+}
+
+// A confirmed retry posted the saved body, which may differ from what the
+// form shows now, so it is described generically.
+async function purchaseSaved(
+  outcome = {
+    title: 'Saved receipt confirmed',
+    details: ['Material lots and purchase history have been refreshed.']
+  }
+) {
   receiptForm.reset()
+  receiptDraft.clearDraft()
   receiptFormView.value?.clearErrors()
-  $q.notify({ type: 'positive', message: 'Material receipt saved.' })
   await Promise.all([
     workspaceState.refresh(),
     purchaseHistory.loaded.value ? purchaseHistory.reload() : Promise.resolve()
   ])
+  receiptConfirmation.value = outcome
+}
+
+function discardReceiptDraft() {
+  receiptForm.reset()
+  receiptDraft.clearDraft()
+  receiptFormView.value?.clearErrors()
 }
 
 async function submitBatch(payload) {
   if (batchWritesDisabled.value) return
+  batchConfirmation.value = null
   isSubmittingBatch.value = true
   try {
     await recordProductionBatch(payload)
     batchForm.rememberBatch(payload)
-    await batchSaved()
+    await batchSaved(describeBatch(payload))
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -398,16 +454,57 @@ async function submitBatch(payload) {
   }
 }
 
-async function batchSaved() {
+/** Confirmation text for a batch, built before the form is reset. */
+function describeBatch(payload) {
+  const variant = batchForm.variantOptions.value.find(
+    option => option.value === payload.variantId
+  )
+  return {
+    title: `Batch ${payload.batchCode} created`,
+    details: [
+      `${formatQuantity(payload.outputQuantity)} jars of ${variant?.label ?? 'the selected variant'}.`,
+      'Open lots and batch history have been refreshed.'
+    ]
+  }
+}
+
+async function batchSaved(
+  outcome = {
+    title: 'Saved batch confirmed',
+    details: ['Open lots and batch history have been refreshed.']
+  }
+) {
   batchForm.reset()
   batchDraft.clearDraft()
   batchFormView.value?.clearErrors()
-  $q.notify({ type: 'positive', message: 'Production batch saved.' })
   await Promise.all([
     workspaceState.refresh(),
     batchHistory.loaded.value ? batchHistory.reload() : Promise.resolve()
   ])
   void batchForm.refreshSuggestion()
+  batchConfirmation.value = outcome
+}
+
+const formViews = {
+  'receipt-entry': () => receiptFormView.value,
+  'batch-entry': () => batchFormView.value
+}
+
+/** "Record another receipt" / "Create another batch": the form is reset. */
+async function startAnother(name) {
+  if (name === 'receipt-entry') receiptConfirmation.value = null
+  else batchConfirmation.value = null
+  await nextTick()
+  formViews[name]?.()?.focusFirstField()
+}
+
+/** Next action from a confirmation: switch task (and `?view=`). */
+async function openTask(name) {
+  receiptConfirmation.value = null
+  batchConfirmation.value = null
+  task.value = name
+  await nextTick()
+  formViews[name]?.()?.focusFirstField()
 }
 
 function discardBatchDraft() {
