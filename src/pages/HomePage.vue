@@ -119,6 +119,7 @@
       :model-value="open === 'stock-in'"
       :materials="data.materialStock"
       :suppliers="data.suppliers"
+      :recipes="data.recipes"
       @update:model-value="close"
       @saved="ws.refresh"
     />

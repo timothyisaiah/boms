@@ -19,7 +19,7 @@ export const ROUTES = {
   auth: {
     name: 'auth',
     path: '/auth',
-    heading: /^Trace every batch with the right people/,
+    heading: /^From hive to handoff/,
     workspace: null,
     roles: null
   },

@@ -52,7 +52,7 @@ test('auth keeps its semantic page heading visible at 320px', async ({
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: /^Trace every batch with the right people/
+      name: /^From hive to handoff/
     })
   ).toBeVisible()
   await expectNoHorizontalOverflow(page)

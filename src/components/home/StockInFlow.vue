@@ -28,9 +28,16 @@
 
     <p class="flow-lead">What arrived? Fill in only what you received.</p>
 
-    <div class="stock-in__list">
+    <div
+      v-for="section in sections"
+      :key="section.title"
+      class="stock-in__list"
+    >
+      <h3 v-if="sections.length > 1" class="stock-in__section">
+        {{ section.title }}
+      </h3>
       <div
-        v-for="material in materials"
+        v-for="material in section.items"
         :key="material.id"
         class="stock-in__row"
         :class="{ 'stock-in__row--active': quantityOf(material) > 0 }"
@@ -96,7 +103,8 @@ import {
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   materials: { type: Array, default: () => [] },
-  suppliers: { type: Array, default: () => [] }
+  suppliers: { type: Array, default: () => [] },
+  recipes: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 
@@ -108,6 +116,21 @@ const lines = reactive({})
 const supplierOptions = computed(() =>
   props.suppliers.map(s => ({ label: s.supplier_name, value: Number(s.id) }))
 )
+// Items the recipes consume come first, so deliveries land on the item that
+// Make jars will draw from.
+const sections = computed(() => {
+  const used = new Set(
+    props.recipes.flatMap(r => (r.items ?? []).map(i => Number(i.material_id)))
+  )
+  const inRecipes = props.materials.filter(m => used.has(Number(m.id)))
+  const others = props.materials.filter(m => !used.has(Number(m.id)))
+  if (!inRecipes.length || !others.length)
+    return [{ title: 'Supplies', items: props.materials }]
+  return [
+    { title: 'Used to make jars', items: inRecipes },
+    { title: 'Other items (not in any recipe)', items: others }
+  ]
+})
 const quantityOf = material => Number(lines[material.id]?.quantity) || 0
 const received = computed(() =>
   props.materials.filter(material => quantityOf(material) > 0)
@@ -196,6 +219,14 @@ async function submit() {
   display: flex;
   flex-direction: column;
   gap: var(--boms-space-2);
+}
+.stock-in__section {
+  margin: var(--boms-space-2) 0 0;
+  font-size: var(--boms-font-size-label);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--boms-color-text-muted);
 }
 .stock-in__row {
   display: flex;

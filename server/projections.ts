@@ -69,8 +69,10 @@ export const projections = {
   reconciliations: full('reconciliations'),
   remittances: full('remittances'),
   expenses: full('expenses'),
-  retailerBalances: `select to_jsonb(t) data from retailer_outstanding_balances t order by outstanding_amount desc,retailer_name`,
-  profitSummary: `select to_jsonb(t) data from finance_profit_summary t`,
+  // Consignment stock earns nothing until sold, so its shelf value is shown
+  // separately: at cost and at today's selling price.
+  retailerBalances: `select to_jsonb(t)||jsonb_build_object('stock_cost',coalesce(o.cost,0),'stock_value',coalesce(o.value,0)) data from retailer_outstanding_balances t left join (select t.retailer_id,sum(t.open_stock_value) cost,sum(t.quantity_open*coalesce(c.unit_price,0)) value from retailer_issue_open_balances t left join current_variant_prices c on c.variant_id=t.variant_id group by t.retailer_id) o on o.retailer_id=t.retailer_id order by t.outstanding_amount desc,t.remaining_quantity desc,t.retailer_name`,
+  profitSummary: `select to_jsonb(t)||jsonb_build_object('stock_at_retailers_cost',(select coalesce(sum(cost),0) from (select t.retailer_id,sum(t.open_stock_value) cost,sum(t.quantity_open*coalesce(c.unit_price,0)) value from retailer_issue_open_balances t left join current_variant_prices c on c.variant_id=t.variant_id group by t.retailer_id) o),'stock_at_retailers_value',(select coalesce(sum(value),0) from (select t.retailer_id,sum(t.open_stock_value) cost,sum(t.quantity_open*coalesce(c.unit_price,0)) value from retailer_issue_open_balances t left join current_variant_prices c on c.variant_id=t.variant_id group by t.retailer_id) o)) data from finance_profit_summary t`,
   recipes: `select to_jsonb(t)||jsonb_build_object('items',coalesce((select jsonb_agg(to_jsonb(i)||jsonb_build_object('material',to_jsonb(m)) order by i.id) from production_recipe_items i join materials m on m.id=i.material_id where i.recipe_id=t.id),'[]')) data from production_recipes t order by t.id`,
   pricing: `select to_jsonb(t) data from pricing t order by effective_from desc,id desc`,
   // Simple operations (home): bounded per-material and per-variant totals.

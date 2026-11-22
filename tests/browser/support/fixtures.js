@@ -93,7 +93,9 @@ function buildFixtures() {
     recognized_sales_value: 100000,
     remitted_amount: 50000,
     sold_quantity: 5,
-    issued_quantity: 15
+    issued_quantity: 15,
+    stock_cost: 55000,
+    stock_value: 200000
   }
   const purchases = [
     {
@@ -213,7 +215,10 @@ function buildFixtures() {
         gross_profit: 72500,
         operating_expenses: 0,
         net_profit: 72500,
-        outstanding_amount: 50000
+        outstanding_amount: 50000,
+        remaining_quantity: 10,
+        stock_at_retailers_cost: 55000,
+        stock_at_retailers_value: 200000
       },
       pricing: [
         {

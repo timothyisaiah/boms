@@ -1,6 +1,7 @@
 // One-tap home (/home): make jars, stock in, give, sell, check in, scanning.
 import { test, expect } from '@playwright/test'
 import {
+  createFixtures,
   expectNoHorizontalOverflow,
   gotoRoute,
   mockApi
@@ -178,4 +179,44 @@ test('sales staff see only the actions they may do', async ({ page }) => {
   await expect(action(page, 'make')).toHaveCount(0)
   await expect(action(page, 'checkin')).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
+})
+
+test('make jars explains stock held under a duplicate item; stock in lists recipe items first', async ({
+  page
+}) => {
+  await page.setViewportSize(PHONE)
+  const fixtures = createFixtures()
+  const home = fixtures.workspaces.home
+  // The owner's "60g Sticker" holds stock; the recipe points at an empty "60g Label".
+  home.materialStock.push({
+    id: 27,
+    code: 'STICKER-60',
+    name: '60g Sticker',
+    kind: 'packaging',
+    unit_of_measure: 'Strip(s)',
+    purchase_unit_label: null,
+    purchase_unit_size: '1.000',
+    on_hand: '240.000',
+    low_stock_threshold: '0'
+  })
+  home.materialStock.find(m => m.id === 25).on_hand = '0.000'
+  await mockApi(page, { fixtures })
+  await gotoRoute(page, '/home')
+  await action(page, 'make').click()
+  await row(page, 'BEE-RAW-60').locator('input').fill('10')
+  await expect(dialog(page).locator('[data-make-elsewhere]')).toContainText(
+    'Your stock is recorded as “60g Sticker” (240 Strip(s))'
+  )
+  await expect(submit(page)).toBeDisabled()
+  await dialog(page).getByRole('button', { name: 'Close' }).click()
+
+  await action(page, 'stock-in').click()
+  const sections = dialog(page).locator('.stock-in__section')
+  await expect(sections).toHaveText([
+    'Used to make jars',
+    'Other items (not in any recipe)'
+  ])
+  await expect(
+    dialog(page).locator('.stock-in__list').last().locator('[data-material]')
+  ).toHaveAttribute('data-material', 'STICKER-60')
 })
