@@ -56,6 +56,19 @@
           <span v-if="line.short" class="flow-uses__have">
             only {{ formatMaterialAmount(line.material, line.onHand) }} in stock
           </span>
+          <span
+            v-if="line.short && stockedElsewhere(line)"
+            class="flow-uses__have"
+            data-make-elsewhere
+          >
+            Your stock is recorded as “{{ stockedElsewhere(line).name }}” ({{
+              formatMaterialAmount(
+                stockedElsewhere(line),
+                stockedElsewhere(line).on_hand
+              )
+            }}). The recipe uses a different item: ask the owner to fix the
+            recipe in Catalogue settings.
+          </span>
         </li>
       </ul>
     </section>
@@ -74,6 +87,7 @@ import {
   jarLabel,
   totalJars
 } from '@/lib/simpleOps'
+import { materialKey } from '@/lib/materialKeys'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -82,6 +96,20 @@ const props = defineProps({
   materials: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
+
+/** Same physical item stocked under another name/code (e.g. Sticker vs Label). */
+function stockedElsewhere(line) {
+  const key = materialKey(line.material)
+  if (key.startsWith('code:')) return null
+  return (
+    props.materials.find(
+      m =>
+        Number(m.id) !== Number(line.material.id) &&
+        materialKey(m) === key &&
+        Number(m.on_hand) > line.onHand
+    ) ?? null
+  )
+}
 
 const counts = ref({})
 const write = useFlowWrite('production-run')

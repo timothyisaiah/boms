@@ -400,3 +400,127 @@ test('client maths mirrors the database: requirements, units, check-in', async (
     true
   )
 })
+
+test('duplicate supply items are recognised by what they are, not their code', async () => {
+  const { materialKey, duplicateGroups, sizeInGrams } =
+    await import('../src/lib/materialKeys.js')
+  // The catalogue that broke Make jars: stock under the owner's items,
+  // recipes pointing at the seed's empty copies.
+  const materials = [
+    {
+      id: 13,
+      code: 'RAW-20',
+      name: 'RAW Honey',
+      kind: 'raw_honey',
+      on_hand: 20
+    },
+    {
+      id: 24,
+      code: 'RAW-HONEY-KG',
+      name: 'Raw Honey',
+      kind: 'raw_honey',
+      on_hand: 0
+    },
+    {
+      id: 9,
+      code: 'JAR-1000',
+      name: '1 Litre Jar',
+      kind: 'packaging',
+      on_hand: 90
+    },
+    {
+      id: 12,
+      code: 'STICKER-1000',
+      name: '1 Litre Sticker',
+      kind: 'packaging',
+      on_hand: 100
+    },
+    {
+      id: 31,
+      code: 'LABEL-1000',
+      name: '1kg Label',
+      kind: 'packaging',
+      on_hand: 0
+    },
+    {
+      id: 7,
+      code: 'JAR-400',
+      name: '400g Jar',
+      kind: 'packaging',
+      on_hand: 96
+    },
+    {
+      id: 30,
+      code: 'LABEL-400',
+      name: '400g Label',
+      kind: 'packaging',
+      on_hand: 0
+    },
+    {
+      id: 10,
+      code: 'STICKER-400',
+      name: '400g STICKER',
+      kind: 'packaging',
+      on_hand: 100
+    },
+    { id: 8, code: 'JAR-60', name: '60g Jar', kind: 'packaging', on_hand: 230 },
+    {
+      id: 29,
+      code: 'LABEL-60',
+      name: '60g Label',
+      kind: 'packaging',
+      on_hand: 0
+    },
+    {
+      id: 11,
+      code: 'STICKER-60',
+      name: '60g Sticker',
+      kind: 'packaging',
+      on_hand: 240
+    },
+    {
+      id: 25,
+      code: 'GINGER-POWDER-KG',
+      name: 'Ginger Powder',
+      kind: 'spice',
+      on_hand: 1
+    },
+    {
+      id: 23,
+      code: 'GINGER',
+      name: 'Ginger Powder',
+      kind: 'spice',
+      on_hand: 0
+    },
+    {
+      id: 40,
+      code: 'CARTON-12',
+      name: '12-Jar Master Carton',
+      kind: 'packaging',
+      on_hand: 0
+    }
+  ]
+  assert.equal(sizeInGrams('1 Litre Sticker'), 1000)
+  assert.equal(materialKey(materials[3]), 'label:1000')
+  assert.equal(materialKey(materials[2]), 'jar:1000')
+  assert.equal(materialKey(materials[13]), 'code:CARTON-12')
+  assert.deepEqual(
+    duplicateGroups(materials).map(g => [g.key, g.items.map(m => m.id)]),
+    [
+      ['raw_honey', [13, 24]],
+      ['label:1000', [12, 31]],
+      ['label:400', [10, 30]],
+      ['label:60', [11, 29]],
+      ['spice:ginger', [25, 23]]
+    ]
+  )
+  // Inactive items and jars (no duplicates) are left alone.
+  assert.deepEqual(
+    duplicateGroups(
+      materials.map(m => (m.id === 24 ? { ...m, is_active: false } : m))
+    )
+      .map(g => g.key)
+      .includes('raw_honey'),
+    false
+  )
+})

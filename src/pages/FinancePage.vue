@@ -217,6 +217,8 @@ const profitSummary = computed(() => ({
   net_profit: 0,
   remitted_amount: 0,
   outstanding_amount: 0,
+  stock_at_retailers_cost: 0,
+  stock_at_retailers_value: 0,
   ...workspace.value.profitSummary
 }))
 
@@ -232,12 +234,13 @@ const metrics = computed(() => [
   {
     label: 'Recognized sales',
     value: formatMoney(profitSummary.value.recognized_sales_value),
-    hint: `${formatQuantity(profitSummary.value.sold_quantity)} jars settled`
+    hint: `${formatQuantity(profitSummary.value.sold_quantity)} jars sold · ${formatMoney(profitSummary.value.remitted_amount)} collected`
   },
+  // Consignment jars are not sales yet; show what the shelves are worth.
   {
-    label: 'Remitted',
-    value: formatMoney(profitSummary.value.remitted_amount),
-    hint: `${formatQuantity(historyCounts.value.remittances)} receipts posted`
+    label: 'On retailer shelves',
+    value: formatMoney(profitSummary.value.stock_at_retailers_value),
+    hint: `${formatQuantity(profitSummary.value.remaining_quantity)} jars, not yet sold`
   },
   {
     label: 'Gross profit',

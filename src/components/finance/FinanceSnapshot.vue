@@ -22,6 +22,10 @@
           </p>
           <dl class="finance-snapshot__facts">
             <div>
+              <dt>Given (consignment)</dt>
+              <dd>{{ formatQuantity(balance.issued_quantity) }}</dd>
+            </div>
+            <div>
               <dt>Sold</dt>
               <dd>{{ formatQuantity(balance.sold_quantity) }}</dd>
             </div>
@@ -34,8 +38,12 @@
               <dd>{{ formatQuantity(balance.damaged_quantity) }}</dd>
             </div>
             <div>
-              <dt>Remaining</dt>
+              <dt>On their shelf</dt>
               <dd>{{ formatQuantity(balance.remaining_quantity) }}</dd>
+            </div>
+            <div v-if="Number(balance.remaining_quantity) > 0">
+              <dt>Shelf value (selling price)</dt>
+              <dd data-shelf-value>{{ formatMoney(balance.stock_value) }}</dd>
             </div>
             <div>
               <dt>Recognized sales</dt>
@@ -67,6 +75,10 @@
       <h2 :id="profitId" class="section-title finance-snapshot__title">
         Profit and loss
       </h2>
+      <p class="finance-snapshot__muted finance-snapshot__note">
+        Jars given to retailers count as sales only when a check-in records them
+        sold. Until then they are stock on the retailer's shelf.
+      </p>
       <dl class="finance-snapshot__profit">
         <div v-for="row in profitRows" :key="row.label">
           <dt>{{ row.label }}</dt>
@@ -105,6 +117,14 @@ const profitRows = computed(() => {
     { label: 'Returned to warehouse', value: jars(profit.returned_quantity) },
     { label: 'Damaged at retailer', value: jars(profit.damaged_quantity) },
     { label: 'Still at retailers', value: jars(profit.remaining_quantity) },
+    {
+      label: 'Shelf value at selling price',
+      value: formatMoney(profit.stock_at_retailers_value)
+    },
+    {
+      label: 'Shelf value at cost',
+      value: formatMoney(profit.stock_at_retailers_cost)
+    },
     {
       label: 'Recognized sales',
       value: formatMoney(profit.recognized_sales_value)
@@ -180,6 +200,9 @@ const profitRows = computed(() => {
 .finance-snapshot__muted {
   margin: 0;
   color: var(--boms-color-text-muted);
+}
+.finance-snapshot__note {
+  margin: 0 0 var(--boms-space-3);
 }
 .finance-snapshot__caption {
   font-size: var(--boms-font-size-caption);

@@ -32,6 +32,7 @@
     "neon:migrate": "node scripts/neon-migrate.mjs",
     "neon:seed": "node scripts/neon-seed.mjs",
     "neon:provision-user": "node scripts/neon-provision-user.mjs",
+    "neon:repair-materials": "node scripts/repair-recipe-materials.mjs",
     "postinstall": "quasar prepare --silent"
   },
   "dependencies": {

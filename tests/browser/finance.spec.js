@@ -183,3 +183,18 @@ test('read-only management receives review tasks without write forms', async ({
     page.getByRole('button', { name: 'Record reconciliation' })
   ).toHaveCount(0)
 })
+
+test('consignment jars show their shelf value, not as sales', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1280, height: 844 })
+  await mockApi(page)
+  await gotoRoute(page, '/finance?view=snapshot', { expectPath: '/finance' })
+  await expect(page.getByText('On retailer shelves')).toBeVisible()
+  await expect(page.getByText('10 jars, not yet sold')).toBeVisible()
+  await expect(page.locator('[data-shelf-value]')).toHaveText(/UGX\s?200,000/)
+  await expect(page.getByText('Shelf value at cost')).toBeVisible()
+  await expect(
+    page.getByText('count as sales only when a check-in records them sold')
+  ).toBeVisible()
+})
